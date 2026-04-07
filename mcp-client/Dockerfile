@@ -1,15 +1,18 @@
-FROM python:3.11-slim
-
-# Install socat to act as our local TLS proxy
-RUN apt-get update && apt-get install -y socat && rm -rf /var/lib/apt/lists/*
+FROM python:3.12-slim
 
 WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY client.py .
-COPY run.sh .
-RUN chmod +x run.sh
 
-# Run the proxy and the client together
-CMD ["./run.sh"]
+ENV PYTHONUNBUFFERED=1
+# Disable SSL cert verification for self-signed lab cert
+ENV PYTHONHTTPSVERIFY=0
+
+CMD ["python", "client.py"]

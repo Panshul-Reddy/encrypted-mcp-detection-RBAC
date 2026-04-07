@@ -1,41 +1,137 @@
 services:
+  # MCP server
   mcp-server:
     build: ./mcp-server
     container_name: mcp-server
     networks:
-      - mcp-lab-net
+      mcp-lab-net:
+        ipv4_address: 10.10.0.10
     expose:
-      - "8080" # Standard HTTP port for the SSE transport
+      - "8443"
 
-  mcp-client:
+  # Noise HTTPS/WSS server
+  noise-server:
+    build: ./noise-server
+    container_name: noise-server
+    networks:
+      mcp-lab-net:
+        ipv4_address: 10.10.0.20
+    expose:
+      - "9443"
+
+  # MCP clients differentiated by session mode, not only by seed
+  # mixed:       50% interactive, 30% bot, 20% burst
+  # bot:         100% bot mode (Poisson-distributed, repetitive; simulates CI or monitoring)
+  # interactive: 100% interactive (human-paced, varied tools)
+  mcp-client-1:
     build: ./mcp-client
-    container_name: mcp-client
+    container_name: mcp-client-1
     depends_on:
       - mcp-server
     networks:
-      - mcp-lab-net
+      mcp-lab-net:
+        ipv4_address: 10.10.0.31
     environment:
-      - MCP_SERVER_URL=http://mcp-server:8080/sse
+      - MCP_SERVER_URL=https://10.10.0.10:8443/sse
+      - WORKER_SEED=1
+      - SESSION_MODE=mixed
 
-  noise-generator:
-    build: ./noise-generator
-    container_name: noise-generator
-    networks:
-      - mcp-lab-net
-
-  # The Network Tap sits on the same network but requires elevated privileges to sniff packets
-  network-tap:
-    image: nicolaka/netshoot  # A standard network troubleshooting image
-    container_name: network-tap
-    network_mode: host # This allows it to see the Docker bridge interfaces
-    command: >
-      bash -c "tcpdump -i any 'tcp port 8443 or tcp port 443' -w /capture/dataset.pcap"
-    volumes:
-      - ./capture:/capture # Dumps the pcap file straight to your local directory
+  mcp-client-2:
+    build: ./mcp-client
+    container_name: mcp-client-2
     depends_on:
-      - mcp-client
-      - noise-generator
+      - mcp-server
+    networks:
+      mcp-lab-net:
+        ipv4_address: 10.10.0.32
+    environment:
+      - MCP_SERVER_URL=https://10.10.0.10:8443/sse
+      - WORKER_SEED=2
+      - SESSION_MODE=bot
+
+  mcp-client-3:
+    build: ./mcp-client
+    container_name: mcp-client-3
+    depends_on:
+      - mcp-server
+    networks:
+      mcp-lab-net:
+        ipv4_address: 10.10.0.33
+    environment:
+      - MCP_SERVER_URL=https://10.10.0.10:8443/sse
+      - WORKER_SEED=3
+      - SESSION_MODE=interactive
+
+  # Noise client
+  noise-client:
+    build: ./noise-client
+    container_name: noise-client
+    depends_on:
+      - noise-server
+    networks:
+      mcp-lab-net:
+        ipv4_address: 10.10.0.40
+    environment:
+      - NOISE_SERVER=https://10.10.0.20:9443
+
+  # Packet capture sidecars (Docker Desktop/macOS compatible)
+  # Sidecars are used because a standard bridge-attached container cannot
+  # reliably observe unicast traffic between peer containers. Each tap runs in
+  # the corresponding server network namespace.
+  # Rotation: create a new PCAP file every 600 seconds and retain 288 files
+  #           (approximately 48 hours).
+  # Compression: gzip each rotated file.
+  # Snapshot length: 0 captures full packets; buffer size is 128 MB.
+  mcp-tap:
+    image: nicolaka/netshoot
+    container_name: mcp-tap
+    network_mode: "service:mcp-server"
+    cap_add:
+      - NET_RAW
+    command: >
+      bash -ec "
+        echo '[mcp-tap] Waiting for mcp-server:8443...';
+        until nc -z localhost 8443; do sleep 0.5; done;
+        sleep 1;
+        echo '[mcp-tap] Capturing tcp/8443 on eth0';
+        tcpdump -i eth0 -s 0 -B 131072 \\
+          'tcp port 8443' \\
+          -G 600 -W 288 \\
+          -w /capture/mcp_%Y%m%d_%H%M%S.pcap \\
+          -z gzip;
+      "
+    volumes:
+      - ./capture:/capture
+    depends_on:
+      - mcp-server
+
+  noise-tap:
+    image: nicolaka/netshoot
+    container_name: noise-tap
+    network_mode: "service:noise-server"
+    cap_add:
+      - NET_RAW
+    command: >
+      bash -ec "
+        echo '[noise-tap] Waiting for noise-server:9443...';
+        until nc -z localhost 9443; do sleep 0.5; done;
+        sleep 1;
+        echo '[noise-tap] Capturing tcp/9443 on eth0';
+        tcpdump -i eth0 -s 0 -B 131072 \\
+          'tcp port 9443' \\
+          -G 600 -W 288 \\
+          -w /capture/noise_%Y%m%d_%H%M%S.pcap \\
+          -z gzip;
+      "
+    volumes:
+      - ./capture:/capture
+    depends_on:
+      - noise-server
 
 networks:
   mcp-lab-net:
     driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.10.0.0/24
