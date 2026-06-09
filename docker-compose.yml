@@ -1,0 +1,112 @@
+services:
+  # Nginx TLS Reverse Proxy (Run natively for Mac loopback interception)
+  tls-proxy:
+    build: ./proxy
+    container_name: tls-proxy
+    volumes:
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    networks:
+      mcp-lab-net:
+        ipv4_address: 10.11.0.5
+    depends_on:
+      - mcp-servers
+
+  # Official MCP Servers wrapped in SSE
+  mcp-servers:
+    build: ./mcp-servers
+    container_name: mcp-servers
+    networks:
+      mcp-lab-net:
+        ipv4_address: 10.11.0.10
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+      - "3002:3002"
+      - "3003:3003"
+      - "3004:3004"
+      - "3005:3005"
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-"dummy"}
+      - EXA_API_KEY=${EXA_API_KEY:-"dummy"}
+      - TAVILY_API_KEY=${TAVILY_API_KEY:-"dummy"}
+
+  # Noise HTTPS/WSS/JSON-RPC server (Anirudh's)
+  noise-server:
+    build: ./noise-server
+    container_name: noise-server
+    networks:
+      mcp-lab-net:
+        ipv4_address: 10.11.0.20
+    ports:
+      - "9443:9443"
+
+  # Groq MCP Client (Mrunal's)
+  groq-client:
+    build: ./groq-client
+    container_name: groq-client
+    depends_on:
+      - tls-proxy
+    networks:
+      mcp-lab-net:
+        ipv4_address: 10.11.0.30
+    environment:
+      - VM1_IP=10.11.0.5
+      - GROQ_API_KEY=${GROQ_API_KEY:-"dummy"}
+      - PYTHONUNBUFFERED=1
+
+  # Noise client (Anirudh's + External WAN + Adversarial)
+  noise-client:
+    build: ./noise-client
+    container_name: noise-client
+    depends_on:
+      - noise-server
+    networks:
+      mcp-lab-net:
+        ipv4_address: 10.11.0.40
+    environment:
+      - NOISE_SERVER=https://10.11.0.20:9443
+
+  # Packet capture sidecars (Rust Core will do this later, but we use netshoot for dataset gen)
+  mcp-tap:
+    image: nicolaka/netshoot
+    container_name: mcp-tap
+    network_mode: "service:tls-proxy"
+    cap_add:
+      - NET_RAW
+    command: >
+      bash -ec "
+        echo '[mcp-tap] Waiting for tls-proxy...';
+        sleep 5;
+        echo '[mcp-tap] Capturing tcp on eth0';
+        tcpdump -i eth0 -s 0 -B 131072 'tcp port 8440 or tcp port 8441 or tcp port 8442 or tcp port 8443 or tcp port 8444 or tcp port 8445' -G 600 -W 288 -w /capture/mcp_%Y%m%d_%H%M%S.pcap -z gzip;
+      "
+    volumes:
+      - ./capture:/capture
+    depends_on:
+      - tls-proxy
+
+  noise-tap:
+    image: nicolaka/netshoot
+    container_name: noise-tap
+    network_mode: "service:noise-server"
+    cap_add:
+      - NET_RAW
+    command: >
+      bash -ec "
+        echo '[noise-tap] Waiting for noise-server...';
+        sleep 5;
+        echo '[noise-tap] Capturing tcp/9443 on eth0';
+        tcpdump -i eth0 -s 0 -B 131072 'tcp port 9443' -G 600 -W 288 -w /capture/noise_%Y%m%d_%H%M%S.pcap -z gzip;
+      "
+    volumes:
+      - ./capture:/capture
+    depends_on:
+      - noise-server
+
+networks:
+  mcp-lab-net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.11.0.0/24

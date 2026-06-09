@@ -1,0 +1,46 @@
+[package]
+name = "live-analyzer"
+version = "0.1.0"
+edition = "2024"
+description = "Live MCP traffic classifier — captures packets, extracts flow features, classifies via trained model"
+
+[dependencies]
+# Packet capture
+pcap = "2"
+etherparse = "0.16"
+
+# Async runtime + HTTP client
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
+
+# Concurrent data structures
+dashmap = "6"
+
+# TUI
+ratatui = "0.29"
+crossterm = "0.28"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Utilities
+flate2 = "1"              # gzip decompression for .pcap.gz replay
+chrono = "0.4"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "feature_extraction"
+harness = false

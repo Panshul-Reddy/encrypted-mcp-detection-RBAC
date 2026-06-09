@@ -1,0 +1,16 @@
+# Environments
+.env
+
+# PCAP Data
+capture/
+
+# Python
+__pycache__/
+*.pyc
+*/.venv/
+
+# Rust
+rust-extractor/target/
+
+# logs
+*/*.log
