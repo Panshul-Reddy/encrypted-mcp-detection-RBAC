@@ -25,11 +25,11 @@ trap cleanup EXIT INT
 
 echo "Starting Unified Docker Lab for Bulk Data Generation..."
 # Run docker compose in detached mode so the script can continue
-docker compose up --build
+docker compose up --build -d
 
 # Optionally, you can stream logs to the file in the background if you need them:
 docker compose logs -f > /tmp/hpe_unified_logs.txt 2>&1 &
 
-echo "Generating traffic for 1 hour... (Hit Ctrl+C to stop early)"
-# 1 hour = 3600 seconds
-sleep 3600
+echo "Generating traffic for 2 minutes... (Hit Ctrl+C to stop early)"
+# 2 minutes = 120 seconds
+sleep 120

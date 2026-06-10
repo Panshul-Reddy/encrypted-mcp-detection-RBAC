@@ -146,7 +146,8 @@ impl TuiState {
 
         if let Some(gt) = flow.ground_truth {
             self.total_with_ground_truth += 1;
-            if gt == flow.label {
+            // Binary accuracy: Correct if both are Noise (0) or both are MCP (>=1)
+            if (gt == 0 && flow.label == 0) || (gt >= 1 && flow.label >= 1) {
                 self.correct_predictions += 1;
             }
         }
@@ -415,12 +416,12 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
             };
 
             let gt_text = match flow.ground_truth {
-                Some(1) => "MCP",
                 Some(0) => "NSE",
+                Some(1..=6) => "MCP",
                 _ => "—",
             };
             let gt_style = match flow.ground_truth {
-                Some(gt) if gt == flow.label => Style::default().fg(Color::Green),
+                Some(gt) if (gt == 0 && flow.label == 0) || (gt >= 1 && flow.label >= 1) => Style::default().fg(Color::Green),
                 Some(_) => Style::default().fg(Color::Red).bold(),
                 None => Style::default().fg(Color::DarkGray),
             };

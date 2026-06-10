@@ -15,6 +15,7 @@ import random
 import urllib3
 import os
 import math
+import json
 
 def lognormal(mu: float, sigma: float, floor: float = 0.0) -> float:
     return max(floor, random.lognormvariate(math.log(max(mu, 0.01)), sigma))
@@ -28,8 +29,6 @@ def random_string(min_len: int, max_len: int) -> str:
     return " ".join(random.choices(WORDS, k=random.randint(2, 6)))
 
 def random_url() -> str:
-    # httpbin.org/bytes/N returns exactly N random bytes, guaranteeing massive payload variance!
-    # loripsum.net returns random paragraphs of text
     endpoints = [
         f"https://httpbin.org/bytes/{random.randint(100, 15000)}",
         f"https://loripsum.net/api/{random.randint(1, 5)}/short",
@@ -59,6 +58,115 @@ client = openai.OpenAI(
 )
 
 sessions = {}
+
+# We define the tools for Groq to natively use.
+GROQ_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "list_directory",
+            "description": "List files in a given directory path",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "The absolute path to the directory (e.g. /tmp/mcp-test)"}
+                },
+                "required": ["path"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_entities",
+            "description": "Store conceptual entities in the memory graph",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "entities": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {"type": "string"},
+                                "entityType": {"type": "string"},
+                                "observations": {"type": "array", "items": {"type": "string"}}
+                            },
+                            "required": ["name", "entityType", "observations"]
+                        }
+                    }
+                },
+                "required": ["entities"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "fetch",
+            "description": "Fetch the contents of a URL",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string", "description": "The full HTTP URL to fetch"}
+                },
+                "required": ["url"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_repositories",
+            "description": "Search GitHub repositories",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Search query for repositories"}
+                },
+                "required": ["query"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search",
+            "description": "Perform an Exa internet search for news or topics",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "The search query string"}
+                },
+                "required": ["query"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "tavily-search",
+            "description": "Perform a Tavily AI internet search",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "The search query"}
+                },
+                "required": ["query"]
+            }
+        }
+    }
+]
+
+# Map functions to their respective MCP server name
+TOOL_SERVER_MAP = {
+    "list_directory": "filesystem",
+    "create_entities": "memory",
+    "fetch": "fetch",
+    "search_repositories": "github",
+    "search": "exa",
+    "tavily-search": "tavily"
+}
 
 def get_session(server_name):
     url = SERVERS[server_name]
@@ -121,73 +229,78 @@ def call_mcp_tool(server_name, method, params={}):
         return str(e)
 
 def run_claude_session(prompt, servers_to_use):
-    print(f"\n--- Claude prompt: {prompt[:50]}...")
+    print(f"\n--- Groq prompt: {prompt[:50]}...")
+    
+    # Still call tools/list to generate base MCP traffic and "discover" tools
     for server in servers_to_use:
         status = call_mcp_tool(server, "tools/list", {})
         print(f"  [{server}] tools/list -> {status}")
 
     try:
-        # We only call the LLM if we have a real key, otherwise we just simulate tool calls to generate traffic
         if GROQ_API_KEY != "dummy":
+            # Force the model to think it might need tools
             message = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
+                model="llama-3.3-70b-versatile",
                 max_tokens=500,
-                messages=[{"role": "user", "content": prompt}]
+                messages=[
+                    {"role": "system", "content": "You are a helpful AI assistant connected to various tools. You MUST use tools when relevant."},
+                    {"role": "user", "content": prompt}
+                ],
+                tools=GROQ_TOOLS,
+                tool_choice="auto"
             )
-            response = message.choices[0].message.content
-            print(f"  LLM response: {response[:100]}...")
+            response = message.choices[0].message
+            
+            if response.tool_calls:
+                print(f"  LLM triggered {len(response.tool_calls)} tool calls!")
+                for tc in response.tool_calls:
+                    func_name = tc.function.name
+                    try:
+                        args = json.loads(tc.function.arguments)
+                    except json.JSONDecodeError:
+                        args = {}
+                    
+                    server = TOOL_SERVER_MAP.get(func_name)
+                    if server:
+                        # Introduce a realistic human-like delay before the tool call
+                        time.sleep(lognormal(3.5, 1.3, 0.3))
+                        print(f"    -> Dispatching {func_name} to {server} with args {args}")
+                        call_mcp_tool(server, "tools/call", {
+                            "name": func_name,
+                            "arguments": args
+                        })
+                    else:
+                        print(f"    -> Unknown function {func_name}")
+            else:
+                print(f"  LLM response (no tools): {str(response.content)[:100]}...")
         else:
             print("  LLM simulation (dummy key)")
             time.sleep(lognormal(2.5, 0.9, 0.5))
 
+            # Fallback heuristic if dummy key is used
+            if "file" in prompt.lower() or "directory" in prompt.lower():
+                time.sleep(lognormal(3.5, 1.3, 0.3))
+                dirs = ["/tmp/mcp-test", "/var/log", "/etc/nginx", "/home/user/docs", "/opt/app/data/" + random_string(5, 10)]
+                call_mcp_tool("filesystem", "tools/call", {
+                    "name": "list_directory",
+                    "arguments": {"path": random.choice(dirs)}
+                })
+            elif "remember" in prompt.lower() or "store" in prompt.lower():
+                time.sleep(lognormal(3.5, 1.3, 0.3))
+                call_mcp_tool("memory", "tools/call", {
+                    "name": "create_entities",
+                    "arguments": {"entities": [{
+                        "name": random_string(5, 15).strip(),
+                        "entityType": random.choice(["person", "concept", "task", "note", "organization"]),
+                        "observations": [random_string(10, 100)]
+                    }]}
+                })
+
     except Exception as e:
         print(f"  LLM error: {e}")
 
-    # Generate specific tool traffic
-    if "file" in prompt.lower() or "directory" in prompt.lower():
-        time.sleep(lognormal(3.5, 1.3, 0.3))
-        dirs = ["/tmp/mcp-test", "/var/log", "/etc/nginx", "/home/user/docs", "/opt/app/data/" + random_string(5, 10)]
-        call_mcp_tool("filesystem", "tools/call", {
-            "name": "list_directory",
-            "arguments": {"path": random.choice(dirs)}
-        })
-    if "remember" in prompt.lower() or "store" in prompt.lower():
-        time.sleep(lognormal(3.5, 1.3, 0.3))
-        call_mcp_tool("memory", "tools/call", {
-            "name": "create_entities",
-            "arguments": {"entities": [{
-                "name": random_string(5, 15).strip(),
-                "entityType": random.choice(["person", "concept", "task", "note", "organization"]),
-                "observations": [random_string(10, 100)]
-            }]}
-        })
-    if "fetch" in prompt.lower() or "url" in prompt.lower():
-        time.sleep(lognormal(3.5, 1.3, 0.3))
-        call_mcp_tool("fetch", "tools/call", {
-            "name": "fetch",
-            "arguments": {"url": random_url()}
-        })
-    if "github" in prompt.lower():
-        time.sleep(lognormal(3.5, 1.3, 0.3))
-        call_mcp_tool("github", "tools/call", {
-            "name": "search_repositories",
-            "arguments": {"query": random_string(10, 40)}
-        })
-    if "search" in prompt.lower() or "news" in prompt.lower():
-        time.sleep(lognormal(3.5, 1.3, 0.3))
-        query = random_string(15, 60)
-        call_mcp_tool("exa", "tools/call", {
-            "name": "search",
-            "arguments": {"query": query}
-        })
-        time.sleep(lognormal(2.0, 0.8, 0.2))
-        call_mcp_tool("tavily", "tools/call", {
-            "name": "tavily-search",
-            "arguments": {"query": query}
-        })
-
 SHORT_PROMPTS = [
-    "List the files in my directory",
+    "List the files in my /tmp/mcp-test directory",
     "What tools do you have available?",
     "Store this note: meeting at 3pm",
     "Fetch the content of example.com",
@@ -196,12 +309,14 @@ SHORT_PROMPTS = [
     "Find documentation for Python requests library",
     "Search the web for recent news about AI agents",
     "Find examples of MCP server implementations",
+    "Can you check what's in /var/log?",
+    "Save the entity 'Groq' as an 'organization' with observation 'fast inference API'",
 ]
 
 LONG_PROMPTS = [
-    "List all files, read each one, store their names in memory, then confirm what you stored",
-    "Check what tools are available across all servers, then use each tool once and report results",
-    "Fetch example.com, store a summary in memory, list what you stored, then verify it",
+    "List all files in /tmp/mcp-test, then fetch httpbin.org, and finally store the summary in memory.",
+    "Check what tools are available, search Exa for latest LLM news, and store the findings in memory.",
+    "Fetch example.com, store a summary in memory, and list what you stored.",
 ]
 
 if __name__ == "__main__":
@@ -214,13 +329,13 @@ if __name__ == "__main__":
 
     # Loop infinitely for dataset generation
     while True:
-        print(f"\nRunning SHORT-LIVED flows ({len(SHORT_PROMPTS)} prompts)...")
+        print(f"\\nRunning SHORT-LIVED flows ({len(SHORT_PROMPTS)} prompts)...")
         for prompt in SHORT_PROMPTS:
             servers = random.sample(list(sessions.keys()), k=min(2, len(sessions)))
             run_claude_session(prompt, servers)
             time.sleep(lognormal(4.0, 1.0, 0.5))
 
-        print(f"\nRunning LONG-LIVED flows ({len(LONG_PROMPTS)} prompts)...")
+        print(f"\\nRunning LONG-LIVED flows ({len(LONG_PROMPTS)} prompts)...")
         for prompt in LONG_PROMPTS:
             servers = list(sessions.keys())
             run_claude_session(prompt, servers)
