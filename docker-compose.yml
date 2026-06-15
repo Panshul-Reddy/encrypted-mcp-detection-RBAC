@@ -5,6 +5,7 @@ services:
     container_name: tls-proxy
     volumes:
       - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./proxy/tool_policy.yaml:/app/tool_policy.yaml:ro
     networks:
       mcp-lab-net:
         ipv4_address: 10.11.0.5
