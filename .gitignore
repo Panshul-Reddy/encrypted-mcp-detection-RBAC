@@ -14,3 +14,5 @@ rust-extractor/target/
 
 # logs
 */*.log
+
+classifier/models/*.joblib
