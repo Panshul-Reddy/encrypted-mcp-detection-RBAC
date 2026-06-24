@@ -76,10 +76,29 @@ If you just want to explain the RBAC logic without starting Docker or worrying a
 
 ---
 
-## 🗣️ Talking Points for Your Mentor
+## 🗣️ Mentor Talking Points: "Why are we looking at the payload if the project says 'No Decryption'?"
 
-When presenting this to your mentor, emphasize these key points:
+This is the most important question your mentor will ask! Here is exactly how to answer it:
 
-1. **Defense in Depth**: Explain that the Rust ML Analyzer operates at **Layer 4** (Network Transport layer, looking at packet timings and sizes), while this RBAC Proxy operates at **Layer 7** (Application layer). Together, they provide a complete "Defense in Depth" strategy.
-2. **Granular Control**: We aren't just blocking IP addresses. We are inspecting the JSON payload itself. This means we can allow a Data Analyst to access the `filesystem` server to `read_file`, but actively block them if they try to call `write_file` on that exact same server.
-3. **Compliance & Auditing**: Every single decision the proxy makes is logged to `rbac_audit.jsonl` and `payload_inspection.jsonl`. Emphasize that in enterprise environments, having an immutable audit log of *who* accessed *what tool* with *what payload* is critical for compliance.
+**The project architecture is a "Defense in Depth" model with two distinct layers:**
+
+1. **Layer 4: Network Perimeter (Rust ML Firewall)**
+   - This is what the core project is about. The Rust analyzer sits on the network wire.
+   - **Crucially: It does NOT decrypt anything.** It uses Machine Learning to look at packet sizes, inter-arrival times, and network flow metadata to classify traffic as MCP or Noise. 
+
+2. **Layer 7: Application Endpoint (The RBAC Proxy we built here)**
+   - Once the ML Firewall allows the traffic through, the packet reaches its final destination: the Application Server.
+   - The application server *has* to terminate the TLS connection (decrypt it) in order to actually serve the request. Our RBAC Proxy sits right here, acting as the "Application Gateway".
+   - Because it is the endpoint, it has the right to inspect the JSON payload and enforce Role-Based Access Control (RBAC).
+
+**The Analogy for your Mentor:**
+> *"The Rust ML Firewall is like a security guard at the front gate of a building. He checks your ID badge and looks at the size of your briefcase, but he isn't allowed to open it (No Decryption).* 
+>
+> *Our RBAC Proxy is the bank teller inside the building. Once you get past the guard and hand the briefcase to the teller, the teller opens it, reads the instructions inside (Payload Inspection), and decides if you have the clearance to withdraw that much money."*
+
+---
+
+## 🗣️ Other Key Talking Points
+
+1. **Granular Control**: We aren't just blocking IP addresses. Because the RBAC proxy acts as the bank teller, it can allow a Data Analyst to access the `filesystem` server to `read_file`, but actively block them if they try to call `write_file` on that exact same server.
+2. **Compliance & Auditing**: Every single decision the proxy makes is logged to `rbac_audit.jsonl` and `payload_inspection.jsonl`. In enterprise environments, having an immutable audit log of *who* accessed *what tool* with *what payload* is critical for compliance.

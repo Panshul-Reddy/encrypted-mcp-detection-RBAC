@@ -323,3 +323,216 @@
 {"timestamp":"2026-06-24T14:01:54Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
 {"timestamp":"2026-06-24T14:01:54Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
 {"timestamp":"2026-06-24T14:02:34Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tmp/mcp-test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:03:02Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:03:02Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:03:10Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tmp/mcp-test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:03:12Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"entityType\":\"tool\",\"name\":\"list_directory\",\"observations\":[\"List files in a given directory path\"]},{\"entityType\":\"tool\",\"name\":\"create_entities\",\"observations\":[\"Store conceptual entities in the memory graph\"]},{\"entityType\":\"tool\",\"name\":\"fetch\",\"observations\":[\"Fetch the contents o...","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:03:13Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:03:13Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:03:18Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"entityType\":\"note\",\"name\":\"meeting\",\"observations\":[\"meeting at 3pm\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:03:27Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:03:27Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:03:32Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"http://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:03:34Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:03:34Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:03:36Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:03:36Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:03:37Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/call","tool":"search_repositories","arguments":"{\"query\":\"MCP server examples\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:03:45Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:03:45Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:03:48Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/call","tool":"tavily-search","arguments":"{\"query\":\"Python requests library documentation\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:03:51Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:03:51Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:03:55Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:03:55Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:04:06Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:04:06Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:04:11Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/var/log\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:04:46Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:04:46Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:04:50Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"entityType\":\"organization\",\"name\":\"Groq\",\"observations\":[\"fast inference API\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:04:51Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:04:51Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:04:51Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:04:51Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:04:51Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:04:51Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:05:03Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:05:03Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:05:03Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:05:03Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:05:03Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:05:03Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:05:17Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/usr/tools/\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:05:22Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/call","tool":"search","arguments":"{\"query\":\"latest LLM news\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:05:27Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"entityType\":\"news\",\"name\":\"latest LLM news\",\"observations\":[\"latest LLM news\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:05:33Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:05:33Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:05:33Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:05:34Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:05:34Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:05:34Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:05:36Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"http://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:05:52Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:05:52Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:06:01Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tmp/mcp-test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:06:08Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:06:09Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:06:17Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tmp/mcp-test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:06:18Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"entityType\":\"tool\",\"name\":\"list_directory\",\"observations\":[\"List files in a given directory path\"]},{\"entityType\":\"tool\",\"name\":\"create_entities\",\"observations\":[\"Store conceptual entities in the memory graph\"]},{\"entityType\":\"tool\",\"name\":\"fetch\",\"observations\":[\"Fetch the contents o...","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:06:19Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:06:19Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:06:21Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"entityType\":\"note\",\"name\":\"meeting\",\"observations\":[\"meeting at 3pm\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:06:30Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:06:30Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:06:31Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"http://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:06:32Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:06:32Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:06:44Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:06:44Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:07:20Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/call","tool":"search_repositories","arguments":"{\"query\":\"MCP server examples\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:07:26Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:07:26Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:07:28Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:07:28Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:07:32Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/call","tool":"tavily-search","arguments":"{\"query\":\"Recent news about AI agents\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:07:33Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:07:33Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:07:37Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:07:37Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:07:39Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/var/log\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:07:46Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:07:46Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:07:47Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"entityType\":\"organization\",\"name\":\"Groq\",\"observations\":[\"fast inference API\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:07:52Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:07:52Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:07:52Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:07:52Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:07:52Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:07:52Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:09:03Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tmp/mcp-test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:09:10Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"http://httpbin.org\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:09:23Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"entityType\":\"summary\",\"name\":\"summary\",\"observations\":[\"listed files in /tmp/mcp-test\",\"fetched httpbin.org\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:09:37Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:09:37Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:09:37Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:09:37Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:09:37Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:09:37Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:09:44Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/usr/local/bin\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:09:52Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:09:52Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:09:52Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:09:52Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:09:52Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:09:52Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:09:55Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"http://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:09:55Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"entityType\":\"summary\",\"name\":\"example.com summary\",\"observations\":[\"example.com content\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:10:06Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:10:06Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:10:24Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tmp/mcp-test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:10:28Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:10:28Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:10:35Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:10:35Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:10:36Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"entityType\":\"Note\",\"name\":\"meeting_at_3pm\",\"observations\":[\"meeting at 3pm\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:10:44Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:10:44Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:10:46Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"http://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:10:48Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:10:48Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:11:01Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/call","tool":"search_repositories","arguments":"{\"query\":\"repositories owned by me\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:11:02Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:11:02Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:11:21Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/call","tool":"search_repositories","arguments":"{\"query\":\"MCP server examples\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:11:26Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:11:26Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:11:29Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:11:29Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:11:31Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/call","tool":"tavily-search","arguments":"{\"query\":\"Recent news AI agents\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:11:33Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:11:33Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:11:34Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/call","tool":"search_repositories","arguments":"{\"query\":\"MCP server implementation\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:11:42Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:11:42Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:11:45Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:11:45Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:11:58Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"entityType\":\"organization\",\"name\":\"Groq\",\"observations\":[\"fast inference API\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:12:00Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:12:00Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:12:00Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:12:00Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:12:00Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:12:00Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:12:11Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tmp/mcp-test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:12:35Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"http://httpbin.org\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:12:38Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"entityType\":\"summary\",\"name\":\"httpbin fetch\",\"observations\":[\"httpbin.org fetch result\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:12:43Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:12:43Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:12:43Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:12:43Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:12:43Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:12:43Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:13:00Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:13:00Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:13:00Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:13:00Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:13:01Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:13:01Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:13:03Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"http://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:13:10Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:13:10Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:13:19Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tmp/mcp-test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:13:20Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:13:20Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:13:22Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tmp/mcp-test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:13:23Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"entityType\":\"tool\",\"name\":\"list_directory\",\"observations\":[\"list files in a directory\"]},{\"entityType\":\"tool\",\"name\":\"create_entities\",\"observations\":[\"store conceptual entities in memory\"]},{\"entityType\":\"tool\",\"name\":\"fetch\",\"observations\":[\"fetch URL contents\"]},{\"entityType\":\"tool...","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:13:27Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:13:27Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:13:32Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"entityType\":\"note\",\"name\":\"meeting\",\"observations\":[\"meeting at 3pm\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:13:40Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:13:40Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:13:47Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"http://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:14:14Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:14:14Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:14:16Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/call","tool":"search_repositories","arguments":"{\"query\":\"repositories owned by me\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:14:18Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:14:18Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:14:25Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:14:25Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:14:46Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:14:46Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:14:48Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/call","tool":"tavily-search","arguments":"{\"query\":\"recent news about AI agents\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:14:52Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:14:52Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:14:55Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:14:55Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:14:56Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/var/log\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:14:57Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:14:57Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:15:01Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"entityType\":\"organization\",\"name\":\"Groq\",\"observations\":[\"fast inference API\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:15:16Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:15:16Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:15:16Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:15:16Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:15:16Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:15:16Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:15:27Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tmp/mcp-test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:15:30Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"http://httpbin.org\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:15:39Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"entityType\":\"summary\",\"name\":\"summary\",\"observations\":[\"listed files in /tmp/mcp-test\",\"fetched httpbin.org\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:15:48Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:15:48Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:15:48Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:15:48Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:15:48Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:15:48Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:15:59Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:15:59Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:15:59Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:15:59Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:15:59Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:15:59Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:16:10Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"http://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:16:11Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"entityType\":\"website\",\"name\":\"example.com\",\"observations\":[\"summary of example.com\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:16:13Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:16:13Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
