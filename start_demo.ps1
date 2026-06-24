@@ -51,14 +51,34 @@ function Cleanup {
 # ==============================================================================
 Log-Step "1. Pre-Flight Checks"
 
-# Check Docker
+# Kill any leftover processes from previous runs
+$portsToClean = @(5050, 9999)
+foreach ($p in $portsToClean) {
+    Get-NetTCPConnection -LocalPort $p -ErrorAction SilentlyContinue |
+        Select-Object OwningProcess -Unique |
+        ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
+}
+Get-NetUDPEndpoint -LocalPort 9999 -ErrorAction SilentlyContinue |
+    Select-Object OwningProcess -Unique |
+    ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
+Start-Sleep -Seconds 1
+
+# Check Docker — temporarily relax error handling since docker info writes to stderr
+$savedEAP = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
 try {
-    docker info 2>$null | Out-Null
-    Log-Success "Docker is running"
+    $dockerOut = docker info 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Log-Success "Docker is running"
+    } else {
+        throw "docker info exited with code $LASTEXITCODE"
+    }
 } catch {
     Log-Error "Docker is not running! Start Docker Desktop first."
+    $ErrorActionPreference = $savedEAP
     exit 1
 }
+$ErrorActionPreference = $savedEAP
 
 # Check Rust binary
 $rustBinary = Join-Path $ProjectRoot "rust-extractor\target\release\live-analyzer.exe"
@@ -130,8 +150,9 @@ Log-Success "TLS Proxy running (PID: $($proc.Id)) - Check $proxyLog for KILL eve
 Start-Sleep -Seconds 2
 
 # --- 3c. Groq Traffic Generator ---
-Log-Info "Starting Groq MCP Traffic Generator..."
+Log-Info "Starting Groq MCP Traffic Generator (role: full)..."
 $env:VM1_IP = "127.0.0.1"
+$env:MCP_API_KEY = "full-access-key-001"
 $groqVenv = Join-Path $ProjectRoot "groq-client\.venv\Scripts"
 $groqLog = Join-Path $logDir "groq.log"
 $proc = Start-Process -FilePath (Join-Path $groqVenv "python.exe") `
@@ -139,10 +160,9 @@ $proc = Start-Process -FilePath (Join-Path $groqVenv "python.exe") `
     -WorkingDirectory (Join-Path $ProjectRoot "groq-client") `
     -RedirectStandardOutput $groqLog `
     -RedirectStandardError (Join-Path $logDir "groq_err.log") `
-    -PassThru -WindowStyle Hidden `
-    -Environment @{ VM1_IP="127.0.0.1"; GROQ_API_KEY=$env:GROQ_API_KEY }
+    -PassThru -WindowStyle Hidden
 $script:bgJobs += $proc.Id
-Log-Success "Groq Traffic Generator running (PID: $($proc.Id))"
+Log-Success "Groq Traffic Generator running (PID: $($proc.Id)) [FULL access]"
 
 # --- 3d. Noise Attacker ---
 Log-Info "Starting Noise Attacker..."
@@ -154,40 +174,74 @@ $proc = Start-Process -FilePath (Join-Path $noiseVenv "python.exe") `
     -WorkingDirectory (Join-Path $ProjectRoot "noise-client") `
     -RedirectStandardOutput $noiseLog `
     -RedirectStandardError (Join-Path $logDir "noise_err.log") `
-    -PassThru -WindowStyle Hidden `
-    -Environment @{ NOISE_SERVER="https://127.0.0.1:9443" }
+    -PassThru -WindowStyle Hidden
 $script:bgJobs += $proc.Id
 Log-Success "Noise Attacker running (PID: $($proc.Id))"
 
+# --- 3e. Restricted Analyst Client (RBAC Demo) ---
+Log-Info "Starting Restricted Analyst Client (role: analyst)..."
+$env:MCP_API_KEY = "analyst-key-001"
+$env:ROLE_LABEL = "analyst"
+$env:LOOP_COUNT = "5"
+$restrictedLog = Join-Path $logDir "restricted_client.log"
+$proc = Start-Process -FilePath (Join-Path $groqVenv "python.exe") `
+    -ArgumentList "restricted_mcp_client.py" `
+    -WorkingDirectory (Join-Path $ProjectRoot "groq-client") `
+    -RedirectStandardOutput $restrictedLog `
+    -RedirectStandardError (Join-Path $logDir "restricted_err.log") `
+    -PassThru -WindowStyle Hidden
+$script:bgJobs += $proc.Id
+Log-Success "Restricted Client running (PID: $($proc.Id)) [ANALYST - writes will be DENIED]"
+
 # ==============================================================================
-# Phase 4: Rust Live Analyzer TUI
+# Phase 4: Rust Live Analyzer TUI (or RBAC Live Monitor fallback)
 # ==============================================================================
 Log-Step "4. Launching Rust Live Analyzer"
 
 Log-Warn "The TUI requires Npcap access (Administrator privileges)."
-Log-Info "Press 'q' or Ctrl+C in the TUI to safely shutdown ALL services."
-Log-Info ""
-Log-Info "Monitor proxy kills:  Get-Content $proxyLog -Wait"
-Log-Info "Monitor API logs:     Get-Content $apiLog -Wait"
 Log-Info ""
 
-# List interfaces for user to pick
-Log-Info "Available network interfaces:"
-& $rustBinary --list-interfaces 2>$null
-
-Write-Host ""
-Write-Host "Starting live analyzer on the Npcap Loopback Adapter..." -ForegroundColor Yellow
-Write-Host "  (If no loopback adapter, use Wi-Fi or the adapter carrying Docker traffic)" -ForegroundColor DarkGray
-Write-Host ""
-
+# Try to launch the Rust TUI
+$tuiSucceeded = $false
 try {
-    # Npcap installs a loopback adapter called "\Device\NPF_Loopback" or "Npcap Loopback Adapter"
-    # Try common Windows interface names
+    Log-Info "Available network interfaces:"
+    & $rustBinary --list-interfaces 2>$null
+
+    Write-Host ""
+    Write-Host "Starting live analyzer on the Npcap Loopback Adapter..." -ForegroundColor Yellow
+    Write-Host "  (If no loopback adapter, use Wi-Fi or the adapter carrying Docker traffic)" -ForegroundColor DarkGray
+    Write-Host ""
+
+    $tuiStartTime = Get-Date
     & $rustBinary --interface "\Device\NPF_Loopback" --inference-url http://localhost:5050
+    $tuiEndTime = Get-Date
+
+    # If the TUI ran for more than 5 seconds, we consider it a success and user just quit.
+    # If it ran for less than 5 seconds, it probably crashed immediately.
+    if (($tuiEndTime - $tuiStartTime).TotalSeconds -gt 5) {
+        $tuiSucceeded = $true
+    } else {
+        Log-Warn "Rust TUI exited almost immediately. Falling back to RBAC Live Monitor..."
+    }
 } catch {
-    Log-Warn "Loopback failed. Trying with adapter list..."
-    & $rustBinary --list-interfaces
-} finally {
-    # Cleanup all services when TUI exits
-    Cleanup
+    Log-Warn "Rust TUI failed to start. Falling back to RBAC Live Monitor..."
 }
+
+if (-not $tuiSucceeded) {
+    Write-Host "`n--- FALLBACK: Live RBAC Monitor ---" -ForegroundColor Cyan
+    Write-Host "Services are running. Waiting for traffic..." -ForegroundColor Gray
+    Write-Host "Press Ctrl+C to stop all services.`n" -ForegroundColor Yellow
+
+    $proxyErrLog = Join-Path $logDir "proxy_err.log"
+    Start-Sleep -Seconds 3
+    
+    if (Test-Path $proxyErrLog) {
+        Get-Content $proxyErrLog -Wait
+    } else {
+        Write-Host "Could not find proxy log at $proxyErrLog"
+        Read-Host "Press Enter to exit"
+    }
+}
+
+# Cleanup all services
+Cleanup

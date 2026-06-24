@@ -52,6 +52,9 @@ SERVERS = {
     "tavily":     f"https://{VM1_IP}:8445",
 }
 
+# MCP API key for RBAC authentication (sent as X-MCP-API-Key header)
+MCP_API_KEY = os.environ.get("MCP_API_KEY", "full-access-key-001")
+
 client = openai.OpenAI(
     api_key=GROQ_API_KEY,
     base_url="https://api.groq.com/openai/v1"
@@ -222,7 +225,7 @@ def call_mcp_tool(server_name, method, params={}):
     url = f"{s['url']}/messages?sessionId={s['session_id']}"
     try:
         r = requests.post(url, json=payload,
-                         headers={"Content-Type": "application/json"},
+                         headers={"Content-Type": "application/json", "X-MCP-API-Key": MCP_API_KEY},
                          timeout=10, verify=False)
         return r.status_code
     except Exception as e:

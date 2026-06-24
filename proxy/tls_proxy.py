@@ -27,6 +27,8 @@ import json
 import os
 import ssl
 import sys
+import time
+from collections import defaultdict
 
 # ─── Optional: pyyaml for policy file ────────────────────────────────────────
 try:
@@ -34,6 +36,20 @@ try:
     HAS_YAML = True
 except ImportError:
     HAS_YAML = False
+
+
+# =============================================================================
+# Server Name Mapping (backend port → human-readable name)
+# =============================================================================
+
+SERVER_NAMES = {
+    3000: "fetch",
+    3001: "memory",
+    3002: "filesystem",
+    3003: "github",
+    3004: "exa",
+    3005: "tavily",
+}
 
 
 # =============================================================================
@@ -63,6 +79,10 @@ class PolicyEngine:
         self.ip_map = {}
         self.api_key_map = {}
         self.default_role = "readonly"
+        self.rate_limits = {}       # role_name -> max requests/minute
+        self.request_counts = defaultdict(list)  # client_key -> [timestamps]
+        self.audit_log_path = None
+        self.payload_log_path = None
 
         if policy_path:
             self._load_policy()
@@ -84,6 +104,11 @@ class PolicyEngine:
             self.ip_map = clients.get("by_ip", {})
             self.api_key_map = clients.get("by_api_key", {})
             self.default_role = clients.get("default_role", "readonly")
+
+            # Extract rate limits from role definitions
+            for rname, rdef in self.roles.items():
+                if isinstance(rdef, dict) and "rate_limit" in rdef:
+                    self.rate_limits[rname] = rdef["rate_limit"]
 
             print(f"[policy] Loaded policy from {self.policy_path}", file=sys.stderr)
             print(f"[policy]   Roles defined: {list(self.roles.keys())}", file=sys.stderr)
@@ -118,6 +143,83 @@ class PolicyEngine:
             return self.ip_map[client_ip]
         return self.default_role
 
+    def set_audit_log(self, path):
+        """Set the path for the JSON Lines audit log."""
+        self.audit_log_path = path
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        print(f"[policy] Audit log: {path}", file=sys.stderr)
+
+    def set_payload_log(self, path):
+        """Set the path for the payload inspection JSONL log."""
+        self.payload_log_path = path
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        print(f"[policy] Payload inspection log: {path}", file=sys.stderr)
+
+    def _audit(self, client_ip, api_key, role, method, tool, decision, reason,
+               server_name="", tool_args=None):
+        """Write one audit entry to the JSONL log."""
+        if not self.audit_log_path:
+            return
+        entry = {
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "client_ip": client_ip,
+            "api_key": (api_key[:8] + "...") if api_key and len(api_key) > 8 else (api_key or ""),
+            "role": role,
+            "method": method,
+            "tool": tool or "",
+            "server": server_name,
+            "decision": decision,
+            "reason": reason,
+        }
+        try:
+            with open(self.audit_log_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(entry, separators=(",", ":")) + "\n")
+        except Exception:
+            pass
+
+    def log_payload(self, client_ip, role, server_name, method, tool, tool_args, decision):
+        """Write detailed payload inspection entry to the JSONL log."""
+        if not getattr(self, 'payload_log_path', None):
+            return
+        # Truncate large arguments for readability
+        args_summary = ""
+        if tool_args and isinstance(tool_args, dict):
+            args_summary = json.dumps(tool_args, separators=(",", ":"), default=str)
+            if len(args_summary) > 300:
+                args_summary = args_summary[:300] + "..."
+        entry = {
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "client_ip": client_ip,
+            "role": role,
+            "server": server_name,
+            "method": method,
+            "tool": tool or "",
+            "arguments": args_summary,
+            "decision": decision,
+        }
+        try:
+            with open(self.payload_log_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(entry, separators=(",", ":")) + "\n")
+        except Exception:
+            pass
+
+    def _check_rate_limit(self, client_key, role_name):
+        """Check if client has exceeded their role's rate limit. Returns (ok, reason)."""
+        limit = self.rate_limits.get(role_name, 0)
+        if limit <= 0:
+            return True, ""
+
+        now = time.time()
+        window = 60.0  # 1-minute window
+        # Clean old timestamps
+        self.request_counts[client_key] = [
+            ts for ts in self.request_counts[client_key] if now - ts < window
+        ]
+        if len(self.request_counts[client_key]) >= limit:
+            return False, f"Rate limit exceeded for role '{role_name}' ({limit}/min)"
+        self.request_counts[client_key].append(now)
+        return True, ""
+
     def evaluate(self, client_ip, api_key, rpc_method, tool_name):
         """
         Evaluate whether a client may invoke a given MCP method/tool.
@@ -132,9 +234,18 @@ class PolicyEngine:
             (allowed: bool, reason: str)
         """
         role_name = self._resolve_role(client_ip, api_key)
+
+        # ── Step 0: Check rate limit ──
+        client_key = f"{client_ip}:{api_key or 'nokey'}"
+        rate_ok, rate_reason = self._check_rate_limit(client_key, role_name)
+        if not rate_ok:
+            self._audit(client_ip, api_key, role_name, rpc_method, tool_name, "DENY", rate_reason)
+            return False, rate_reason
+
         role = self.roles.get(role_name)
 
         if role is None:
+            self._audit(client_ip, api_key, role_name, rpc_method, tool_name, "DENY", f"Unknown role '{role_name}'")
             return False, f"Unknown role '{role_name}'"
 
         # ── Step 1: Check method-level access ──
@@ -158,23 +269,36 @@ class PolicyEngine:
             method_ok = False
 
         if not method_ok:
+            self._audit(client_ip, api_key, role_name, rpc_method, tool_name, "DENY", f"Role '{role_name}' cannot invoke method '{rpc_method}'")
             return False, f"Role '{role_name}' cannot invoke method '{rpc_method}'"
 
         # ── Step 2: For tools/call, check tool-level access ──
         if rpc_method == "tools/call" and tool_name:
+            # Check explicit deny list first (takes priority)
+            denied_tools = role.get("denied_tools", [])
+            if isinstance(denied_tools, list) and tool_name in denied_tools:
+                reason = f"Tool '{tool_name}' is explicitly denied for role '{role_name}'"
+                self._audit(client_ip, api_key, role_name, rpc_method, tool_name, "DENY", reason)
+                return False, reason
+
             allowed_tools = role.get("allowed_tools", [])
 
             if allowed_tools == "*":
+                self._audit(client_ip, api_key, role_name, rpc_method, tool_name, "ALLOW", f"Role '{role_name}' — full tool access")
                 return True, f"Role '{role_name}' — full tool access"
             elif isinstance(allowed_tools, list):
                 if tool_name in allowed_tools:
+                    self._audit(client_ip, api_key, role_name, rpc_method, tool_name, "ALLOW", f"Tool '{tool_name}' allowed for role '{role_name}'")
                     return True, f"Tool '{tool_name}' allowed for role '{role_name}'"
                 else:
+                    self._audit(client_ip, api_key, role_name, rpc_method, tool_name, "DENY", f"Role '{role_name}' cannot use tool '{tool_name}'")
                     return False, (f"Role '{role_name}' cannot use tool '{tool_name}' "
                                    f"(allowed: {', '.join(allowed_tools)})")
             else:
+                self._audit(client_ip, api_key, role_name, rpc_method, tool_name, "DENY", f"Role '{role_name}' has no tool access configured")
                 return False, f"Role '{role_name}' has no tool access configured"
 
+        self._audit(client_ip, api_key, role_name, rpc_method, tool_name, "ALLOW", f"Method '{rpc_method}' allowed for role '{role_name}'")
         return True, f"Method '{rpc_method}' allowed for role '{role_name}'"
 
 
@@ -352,8 +476,9 @@ async def handle_client(client_r, client_w, backend_host, backend_port, policy):
         client_key = "unknown"
         client_ip = "unknown"
 
+    server_name = SERVER_NAMES.get(backend_port, f"port-{backend_port}")
     active_connections[client_key] = client_w
-    print(f"[proxy] Connection from {client_key} → {backend_host}:{backend_port}",
+    print(f"[proxy] Connection from {client_key} → {server_name} ({backend_host}:{backend_port})",
           file=sys.stderr)
 
     # ── Parse the incoming HTTP request ──────────────────────────────────
@@ -372,6 +497,7 @@ async def handle_client(client_r, client_w, backend_host, backend_port, policy):
     if req.method == "POST" and "/messages" in req.path:
         rpc_method = ""
         tool_name = ""
+        tool_args = None
         rpc_id = None
 
         try:
@@ -381,13 +507,20 @@ async def handle_client(client_r, client_w, backend_host, backend_port, policy):
             params = payload.get("params", {})
             if isinstance(params, dict):
                 tool_name = params.get("name", "")
+                tool_args = params.get("arguments", None)
         except (json.JSONDecodeError, UnicodeDecodeError):
             # Unparseable body — will be denied for readonly roles since
             # "__unparseable__" won't match any allowed method list.
             rpc_method = "__unparseable__"
 
         api_key = req.headers.get("x-mcp-api-key", "")
+        role_name = policy._resolve_role(client_ip, api_key)
         allowed, reason = policy.evaluate(client_ip, api_key, rpc_method, tool_name)
+
+        # Log payload details (server name, tool, arguments)
+        decision_str = "ALLOW" if allowed else "DENY"
+        policy.log_payload(client_ip, role_name, server_name, rpc_method,
+                           tool_name, tool_args, decision_str)
 
         if not allowed:
             # ── DENY: return 403 without forwarding to backend ──
@@ -399,7 +532,7 @@ async def handle_client(client_r, client_w, backend_host, backend_port, policy):
                 pass
 
             tool_suffix = f"/{tool_name}" if tool_name else ""
-            print(f"[policy] DENY  {client_key} | {rpc_method}{tool_suffix} | {reason}",
+            print(f"[policy] DENY  {client_key} | {server_name} | {rpc_method}{tool_suffix} | {reason}",
                   file=sys.stderr)
 
             try:
@@ -410,11 +543,11 @@ async def handle_client(client_r, client_w, backend_host, backend_port, policy):
             return
 
         tool_suffix = f"/{tool_name}" if tool_name else ""
-        print(f"[policy] ALLOW {client_key} | {rpc_method}{tool_suffix}",
+        print(f"[policy] ALLOW {client_key} | {server_name} | {rpc_method}{tool_suffix}",
               file=sys.stderr)
     else:
         # GET /sse, OPTIONS, etc. — always pass through (inherently read-only)
-        print(f"[policy] PASS  {client_key} | {req.method} {req.path}",
+        print(f"[policy] PASS  {client_key} | {server_name} | {req.method} {req.path}",
               file=sys.stderr)
 
     # ── Forward to Backend ───────────────────────────────────────────────
@@ -501,6 +634,12 @@ async def main():
               "(backward compatible mode)", file=sys.stderr)
         policy = PolicyEngine()  # No path → permissive defaults
         policy._set_permissive()
+
+    # ── Set up audit logging ──────────────────────────────────────────────
+    logs_dir = os.path.join(os.path.dirname(args.policy or "."), "..", "logs")
+    logs_dir = os.path.abspath(logs_dir)
+    policy.set_audit_log(os.path.join(logs_dir, "rbac_audit.jsonl"))
+    policy.set_payload_log(os.path.join(logs_dir, "payload_inspection.jsonl"))
 
     # ── Start UDP control server (KILL protocol for ML firewall) ─────────
     loop = asyncio.get_running_loop()

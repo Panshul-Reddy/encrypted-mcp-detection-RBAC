@@ -1,0 +1,325 @@
+{"timestamp":"2026-06-17T17:15:15Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-17T17:15:15Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"read_file","arguments":"{\"path\":\"/tmp/hello.txt\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-17T17:15:15Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[]}","decision":"ALLOW"}
+{"timestamp":"2026-06-17T17:15:15Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"{\"path\":\"/tmp/x.txt\",\"content\":\"test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-17T17:15:15Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"{\"entityNames\":[\"x\"]}","decision":"ALLOW"}
+{"timestamp":"2026-06-17T17:15:15Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-17T17:15:15Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"read_file","arguments":"{\"path\":\"/tmp/hello.txt\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-17T17:15:15Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"search","arguments":"{\"query\":\"MCP protocol\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-17T17:15:15Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"name\":\"test\"}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-17T17:15:15Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"{\"path\":\"/tmp/evil.txt\",\"content\":\"hacked\"}","decision":"DENY"}
+{"timestamp":"2026-06-17T17:15:15Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"{\"entityNames\":[\"test\"]}","decision":"DENY"}
+{"timestamp":"2026-06-17T17:15:15Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-17T17:15:15Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tmp\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-17T17:15:15Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"https://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-17T17:15:15Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-17T17:15:15Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-17T17:15:15Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T06:57:23Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T06:57:23Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"read_file","arguments":"{\"path\":\"/tmp/hello.txt\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T06:57:23Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T06:57:23Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"{\"path\":\"/tmp/x.txt\",\"content\":\"test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T06:57:23Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"{\"entityNames\":[\"x\"]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T06:57:23Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T06:57:23Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"read_file","arguments":"{\"path\":\"/tmp/hello.txt\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T06:57:23Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"search","arguments":"{\"query\":\"MCP protocol\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T06:57:23Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"name\":\"test\"}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T06:57:23Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"{\"path\":\"/tmp/evil.txt\",\"content\":\"hacked\"}","decision":"DENY"}
+{"timestamp":"2026-06-24T06:57:23Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"{\"entityNames\":[\"test\"]}","decision":"DENY"}
+{"timestamp":"2026-06-24T06:57:23Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T06:57:23Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tmp\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T06:57:23Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"https://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T06:57:23Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T06:57:23Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T06:57:24Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T07:00:36Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:00:36Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"read_file","arguments":"{\"path\":\"/tmp/hello.txt\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:00:37Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:00:37Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"{\"path\":\"/tmp/x.txt\",\"content\":\"test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:00:37Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"{\"entityNames\":[\"x\"]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:00:39Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:00:39Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"read_file","arguments":"{\"path\":\"/tmp/hello.txt\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:00:39Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"search","arguments":"{\"query\":\"MCP protocol\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:00:40Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"name\":\"test\"}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:00:40Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"{\"path\":\"/tmp/evil.txt\",\"content\":\"hacked\"}","decision":"DENY"}
+{"timestamp":"2026-06-24T07:00:40Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"{\"entityNames\":[\"test\"]}","decision":"DENY"}
+{"timestamp":"2026-06-24T07:00:42Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:00:42Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tmp\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:00:42Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"https://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:00:43Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T07:00:43Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T07:00:43Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T07:05:23Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:05:24Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"read_file","arguments":"{\"path\":\"/tmp/hello.txt\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:05:24Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:05:24Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"{\"path\":\"/tmp/x.txt\",\"content\":\"test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:05:25Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"{\"entityNames\":[\"x\"]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:05:26Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:05:27Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"read_file","arguments":"{\"path\":\"/tmp/hello.txt\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:05:27Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"search","arguments":"{\"query\":\"MCP protocol\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:05:27Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"name\":\"test\"}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:05:28Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"{\"path\":\"/tmp/evil.txt\",\"content\":\"hacked\"}","decision":"DENY"}
+{"timestamp":"2026-06-24T07:05:28Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"{\"entityNames\":[\"test\"]}","decision":"DENY"}
+{"timestamp":"2026-06-24T07:05:29Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:05:30Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tmp\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:05:30Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"https://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:05:30Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T07:05:31Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T07:05:31Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T07:08:03Z","client_ip":"127.0.0.1","role":"full","server":"port-13100","method":"tools/call","tool":"read_file","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:08:03Z","client_ip":"127.0.0.1","role":"full","server":"port-13100","method":"tools/call","tool":"read_file","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:08:04Z","client_ip":"127.0.0.1","role":"full","server":"port-13100","method":"tools/call","tool":"read_file","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:08:04Z","client_ip":"127.0.0.1","role":"full","server":"port-13100","method":"tools/call","tool":"read_file","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:08:04Z","client_ip":"127.0.0.1","role":"full","server":"port-13100","method":"tools/call","tool":"read_file","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:08:05Z","client_ip":"127.0.0.1","role":"full","server":"port-13100","method":"tools/call","tool":"read_file","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:08:05Z","client_ip":"127.0.0.1","role":"full","server":"port-13100","method":"tools/call","tool":"read_file","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:08:05Z","client_ip":"127.0.0.1","role":"full","server":"port-13100","method":"tools/call","tool":"read_file","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:08:06Z","client_ip":"127.0.0.1","role":"full","server":"port-13100","method":"tools/call","tool":"read_file","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:08:06Z","client_ip":"127.0.0.1","role":"full","server":"port-13100","method":"tools/call","tool":"read_file","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:08:06Z","client_ip":"127.0.0.1","role":"full","server":"port-13100","method":"tools/call","tool":"read_file","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:08:07Z","client_ip":"127.0.0.1","role":"full","server":"port-13100","method":"tools/call","tool":"read_file","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:08:07Z","client_ip":"127.0.0.1","role":"full","server":"port-13100","method":"tools/call","tool":"read_file","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:08:07Z","client_ip":"127.0.0.1","role":"full","server":"port-13100","method":"tools/call","tool":"read_file","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:08:08Z","client_ip":"127.0.0.1","role":"full","server":"port-13100","method":"tools/call","tool":"read_file","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:08:08Z","client_ip":"127.0.0.1","role":"full","server":"port-13100","method":"tools/call","tool":"read_file","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:08:08Z","client_ip":"127.0.0.1","role":"full","server":"port-13100","method":"tools/call","tool":"read_file","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:08:10Z","client_ip":"127.0.0.1","role":"full","server":"port-13100","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:11:18Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:11:19Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"read_file","arguments":"{\"path\":\"/tmp/hello.txt\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:11:19Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:11:19Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"{\"path\":\"/tmp/x.txt\",\"content\":\"test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:11:20Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"{\"entityNames\":[\"x\"]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:11:21Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:11:21Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"read_file","arguments":"{\"path\":\"/tmp/hello.txt\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:11:22Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"search","arguments":"{\"query\":\"MCP protocol\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:11:22Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"name\":\"test\"}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:11:22Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"{\"path\":\"/tmp/evil.txt\",\"content\":\"hacked\"}","decision":"DENY"}
+{"timestamp":"2026-06-24T07:11:23Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"{\"entityNames\":[\"test\"]}","decision":"DENY"}
+{"timestamp":"2026-06-24T07:11:24Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:11:24Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tmp\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:11:25Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"https://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:11:25Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T07:11:25Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T07:11:26Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T07:11:27Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:11:27Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"read_file","arguments":"{\"path\":\"/tmp/hello.txt\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:11:28Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T07:11:30Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T07:11:30Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T13:30:34Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:30:34Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"read_file","arguments":"{\"path\":\"/tmp/hello.txt\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:30:34Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:30:35Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"{\"path\":\"/tmp/x.txt\",\"content\":\"test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:30:35Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"{\"entityNames\":[\"x\"]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:30:36Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:30:37Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"read_file","arguments":"{\"path\":\"/tmp/hello.txt\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:30:37Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"search","arguments":"{\"query\":\"MCP protocol\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:30:37Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"name\":\"test\"}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:30:38Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"{\"path\":\"/tmp/evil.txt\",\"content\":\"hacked\"}","decision":"DENY"}
+{"timestamp":"2026-06-24T13:30:38Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"{\"entityNames\":[\"test\"]}","decision":"DENY"}
+{"timestamp":"2026-06-24T13:30:39Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:30:40Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tmp\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:30:40Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"https://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:30:40Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T13:30:41Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T13:30:41Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T13:30:42Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:30:43Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"read_file","arguments":"{\"path\":\"/tmp/hello.txt\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:30:43Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:30:45Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T13:30:45Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T13:38:24Z","client_ip":"127.0.0.1","role":"analyst","server":"github","method":"tools/call","tool":"search_repositories","arguments":"{\"query\":\"MCP server\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:44:04Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:44:04Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"read_file","arguments":"{\"path\":\"/tmp/hello.txt\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:44:04Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:44:05Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"{\"path\":\"/tmp/x.txt\",\"content\":\"test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:44:05Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"{\"entityNames\":[\"x\"]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:44:06Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:44:07Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"read_file","arguments":"{\"path\":\"/tmp/hello.txt\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:44:07Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"search","arguments":"{\"query\":\"MCP protocol\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:44:07Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"name\":\"test\"}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:44:08Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"{\"path\":\"/tmp/evil.txt\",\"content\":\"hacked\"}","decision":"DENY"}
+{"timestamp":"2026-06-24T13:44:08Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"{\"entityNames\":[\"test\"]}","decision":"DENY"}
+{"timestamp":"2026-06-24T13:44:09Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:44:10Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tmp\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:44:10Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"https://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:44:10Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T13:44:11Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T13:44:11Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T13:44:12Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:44:13Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"read_file","arguments":"{\"path\":\"/tmp/hello.txt\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:44:13Z","client_ip":"127.0.0.1","role":"full","server":"port-13000","method":"tools/call","tool":"create_entities","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:44:15Z","client_ip":"127.0.0.1","role":"readonly","server":"port-13000","method":"tools/call","tool":"write_file","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T13:44:15Z","client_ip":"127.0.0.1","role":"analyst","server":"port-13000","method":"tools/call","tool":"delete_entities","arguments":"","decision":"DENY"}
+{"timestamp":"2026-06-24T13:55:57Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:55:58Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:55:58Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:55:58Z","client_ip":"127.0.0.1","role":"analyst","server":"github","method":"tools/call","tool":"search_repositories","arguments":"{\"query\":\"MCP server\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:00Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/call","tool":"get_file_info","arguments":"{\"path\":\"/app\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:00Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tmp/mcp-test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:01Z","client_ip":"127.0.0.1","role":"analyst","server":"exa","method":"tools/call","tool":"search","arguments":"{\"query\":\"MCP protocol\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:02Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:02Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:03Z","client_ip":"127.0.0.1","role":"analyst","server":"memory","method":"tools/call","tool":"delete_entities","arguments":"{\"entityNames\":[\"test\"]}","decision":"DENY"}
+{"timestamp":"2026-06-24T13:56:03Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tmp/mcp-test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:05Z","client_ip":"127.0.0.1","role":"analyst","server":"memory","method":"tools/call","tool":"search_nodes","arguments":"{\"query\":\"test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:06Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/call","tool":"read_file","arguments":"{\"path\":\"/app/package.json\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:08Z","client_ip":"127.0.0.1","role":"analyst","server":"tavily","method":"tools/call","tool":"tavily-search","arguments":"{\"query\":\"machine learning firewall\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:09Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/call","tool":"write_file","arguments":"{\"path\":\"/tmp/test.txt\",\"content\":\"hacked\"}","decision":"DENY"}
+{"timestamp":"2026-06-24T13:56:10Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"entityType\":\"example\",\"name\":\"example_entity\",\"observations\":[\"observation1\",\"observation2\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:10Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/app\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:12Z","client_ip":"127.0.0.1","role":"analyst","server":"fetch","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"https://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:14Z","client_ip":"127.0.0.1","role":"analyst","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"name\":\"test\",\"entityType\":\"note\",\"observations\":[\"test observation\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:15Z","client_ip":"127.0.0.1","role":"analyst","server":"fetch","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"https://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:17Z","client_ip":"127.0.0.1","role":"analyst","server":"exa","method":"tools/call","tool":"search","arguments":"{\"query\":\"MCP protocol\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:19Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/call","tool":"write_file","arguments":"{\"path\":\"/tmp/test.txt\",\"content\":\"hacked\"}","decision":"DENY"}
+{"timestamp":"2026-06-24T13:56:19Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"https://www.example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:20Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:21Z","client_ip":"127.0.0.1","role":"analyst","server":"memory","method":"tools/call","tool":"search_nodes","arguments":"{\"query\":\"test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:22Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/call","tool":"search_repositories","arguments":"{\"query\":\"example_repository\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:23Z","client_ip":"127.0.0.1","role":"analyst","server":"github","method":"tools/call","tool":"search_repositories","arguments":"{\"query\":\"MCP server\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:25Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/app\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:26Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/call","tool":"search","arguments":"{\"query\":\"example_search_query\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:26Z","client_ip":"127.0.0.1","role":"analyst","server":"tavily","method":"tools/call","tool":"tavily-search","arguments":"{\"query\":\"machine learning firewall\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:28Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/call","tool":"read_file","arguments":"{\"path\":\"/app/package.json\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:30Z","client_ip":"127.0.0.1","role":"analyst","server":"memory","method":"tools/call","tool":"delete_entities","arguments":"{\"entityNames\":[\"test\"]}","decision":"DENY"}
+{"timestamp":"2026-06-24T13:56:31Z","client_ip":"127.0.0.1","role":"analyst","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"name\":\"test\",\"entityType\":\"note\",\"observations\":[\"test observation\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:33Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/call","tool":"get_file_info","arguments":"{\"path\":\"/app\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:35Z","client_ip":"127.0.0.1","role":"analyst","server":"github","method":"tools/call","tool":"search_repositories","arguments":"{\"query\":\"MCP server\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:36Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/call","tool":"tavily-search","arguments":"{\"query\":\"example_tavily_search_query\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:36Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/call","tool":"read_file","arguments":"{\"path\":\"/app/package.json\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:37Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:37Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:37Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/app\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:39Z","client_ip":"127.0.0.1","role":"analyst","server":"exa","method":"tools/call","tool":"search","arguments":"{\"query\":\"MCP protocol\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:40Z","client_ip":"127.0.0.1","role":"analyst","server":"memory","method":"tools/call","tool":"delete_entities","arguments":"{\"entityNames\":[\"test\"]}","decision":"DENY"}
+{"timestamp":"2026-06-24T13:56:41Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:41Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:42Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/call","tool":"write_file","arguments":"{\"path\":\"/tmp/test.txt\",\"content\":\"hacked\"}","decision":"DENY"}
+{"timestamp":"2026-06-24T13:56:42Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"http://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:43Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:43Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:43Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:44Z","client_ip":"127.0.0.1","role":"analyst","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"name\":\"test\",\"entityType\":\"note\",\"observations\":[\"test observation\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:45Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/call","tool":"search_repositories","arguments":"{\"query\":\"user:your_username repositories\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:46Z","client_ip":"127.0.0.1","role":"analyst","server":"tavily","method":"tools/call","tool":"tavily-search","arguments":"{\"query\":\"machine learning firewall\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:47Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:47Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:47Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/call","tool":"get_file_info","arguments":"{\"path\":\"/app\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:48Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/call","tool":"search_repositories","arguments":"{\"query\":\"MCP server examples\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:48Z","client_ip":"127.0.0.1","role":"analyst","server":"fetch","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"https://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:49Z","client_ip":"127.0.0.1","role":"analyst","server":"memory","method":"tools/call","tool":"search_nodes","arguments":"{\"query\":\"test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:51Z","client_ip":"127.0.0.1","role":"analyst","server":"exa","method":"tools/call","tool":"search","arguments":"{\"query\":\"MCP protocol\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:52Z","client_ip":"127.0.0.1","role":"analyst","server":"fetch","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"https://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:54Z","client_ip":"127.0.0.1","role":"analyst","server":"github","method":"tools/call","tool":"search_repositories","arguments":"{\"query\":\"MCP server\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:55Z","client_ip":"127.0.0.1","role":"analyst","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"name\":\"test\",\"entityType\":\"note\",\"observations\":[\"test observation\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:56Z","client_ip":"127.0.0.1","role":"analyst","server":"memory","method":"tools/call","tool":"search_nodes","arguments":"{\"query\":\"test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:56:58Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/call","tool":"read_file","arguments":"{\"path\":\"/app/package.json\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:00Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/call","tool":"write_file","arguments":"{\"path\":\"/tmp/test.txt\",\"content\":\"hacked\"}","decision":"DENY"}
+{"timestamp":"2026-06-24T13:57:02Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/app\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:03Z","client_ip":"127.0.0.1","role":"analyst","server":"tavily","method":"tools/call","tool":"tavily-search","arguments":"{\"query\":\"machine learning firewall\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:04Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:04Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:05Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:05Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:05Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:07Z","client_ip":"127.0.0.1","role":"analyst","server":"memory","method":"tools/call","tool":"delete_entities","arguments":"{\"entityNames\":[\"test\"]}","decision":"DENY"}
+{"timestamp":"2026-06-24T13:57:08Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/call","tool":"get_file_info","arguments":"{\"path\":\"/app\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:10Z","client_ip":"127.0.0.1","role":"analyst","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"name\":\"test\",\"entityType\":\"note\",\"observations\":[\"test observation\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:11Z","client_ip":"127.0.0.1","role":"analyst","server":"fetch","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"https://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:12Z","client_ip":"127.0.0.1","role":"analyst","server":"tavily","method":"tools/call","tool":"tavily-search","arguments":"{\"query\":\"machine learning firewall\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:14Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:16Z","client_ip":"127.0.0.1","role":"analyst","server":"memory","method":"tools/call","tool":"search_nodes","arguments":"{\"query\":\"test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:18Z","client_ip":"127.0.0.1","role":"analyst","server":"memory","method":"tools/call","tool":"delete_entities","arguments":"{\"entityNames\":[\"test\"]}","decision":"DENY"}
+{"timestamp":"2026-06-24T13:57:18Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:18Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:19Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/call","tool":"read_file","arguments":"{\"path\":\"/app/package.json\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:21Z","client_ip":"127.0.0.1","role":"analyst","server":"exa","method":"tools/call","tool":"search","arguments":"{\"query\":\"MCP protocol\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:22Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:22Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:22Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/app\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:23Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/call","tool":"get_file_info","arguments":"{\"path\":\"/app\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:24Z","client_ip":"127.0.0.1","role":"analyst","server":"github","method":"tools/call","tool":"search_repositories","arguments":"{\"query\":\"MCP server\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:26Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:26Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:26Z","client_ip":"127.0.0.1","role":"analyst","server":"filesystem","method":"tools/call","tool":"write_file","arguments":"{\"path\":\"/tmp/test.txt\",\"content\":\"hacked\"}","decision":"DENY"}
+{"timestamp":"2026-06-24T13:57:32Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:32Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:32Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:32Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:32Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:32Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:36Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tmp/mcp-test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:37Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"http://httpbin.org\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:38Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"entityType\":\"summary\",\"name\":\"test summary\",\"observations\":[\"list directory\",\"fetch httpbin\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:48Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:49Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:49Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:49Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:49Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:49Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:53Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tools/available/\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:58Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:58Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:58Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:58Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:58Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:58Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:57:59Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"http://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:58:24Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:58:24Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:58:26Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tmp/mcp-test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:58:30Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:58:31Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:58:34Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/available_tools/\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:58:37Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:58:37Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:58:40Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"entityType\":\"Note\",\"name\":\"Meeting\",\"observations\":[\"meeting at 3pm\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:58:42Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:58:42Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:58:45Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"http://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:58:46Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:58:46Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:58:51Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/call","tool":"search_repositories","arguments":"{\"query\":\"repository owner:yourgithubusername\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:58:54Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:58:54Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:59:23Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/call","tool":"search_repositories","arguments":"{\"query\":\"MCP server examples\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:59:34Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:59:34Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:59:41Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:59:41Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:59:43Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T13:59:43Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:00:08Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:00:08Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:00:11Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/var/log\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:00:15Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:00:15Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:00:44Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"entityType\":\"organization\",\"name\":\"Groq\",\"observations\":[\"fast inference API\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:00:51Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:00:51Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:00:51Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:00:51Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:00:51Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:00:51Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:00:53Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tmp/mcp-test\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:01:14Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"http://httpbin.org\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:01:15Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"entityType\":\"summary\",\"name\":\"summary\",\"observations\":[\"listed files in /tmp/mcp-test\",\"fetched httpbin.org\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:01:20Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:01:20Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:01:20Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:01:20Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:01:20Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:01:20Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:01:44Z","client_ip":"127.0.0.1","role":"full","server":"github","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:01:44Z","client_ip":"127.0.0.1","role":"full","server":"exa","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:01:44Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:01:44Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:01:44Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:01:45Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:01:46Z","client_ip":"127.0.0.1","role":"full","server":"fetch","method":"tools/call","tool":"fetch","arguments":"{\"url\":\"http://example.com\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:01:47Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/call","tool":"create_entities","arguments":"{\"entities\":[{\"entityType\":\"website\",\"name\":\"example.com\",\"observations\":[\"summary of example.com\"]}]}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:01:48Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/memory/graph\"}","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:01:54Z","client_ip":"127.0.0.1","role":"full","server":"tavily","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:01:54Z","client_ip":"127.0.0.1","role":"full","server":"memory","method":"tools/list","tool":"","arguments":"","decision":"ALLOW"}
+{"timestamp":"2026-06-24T14:02:34Z","client_ip":"127.0.0.1","role":"full","server":"filesystem","method":"tools/call","tool":"list_directory","arguments":"{\"path\":\"/tmp/mcp-test\"}","decision":"ALLOW"}

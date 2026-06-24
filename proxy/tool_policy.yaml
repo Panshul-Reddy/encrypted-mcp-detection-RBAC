@@ -1,40 +1,40 @@
 # ============================================================================
-# MCP Tool-Level Access Control Policy
+# MCP Tool-Level Access Control Policy (v2)
 # ============================================================================
 #
 # This policy file controls which MCP tools each client can invoke.
 # It is loaded by the TLS proxy at startup and enforced at the application
 # layer INSIDE the proxy, where TLS has already been terminated.
 #
-# NOTE: This is a complementary security layer to the ML-based encrypted
-# traffic detection performed by the Rust core on the wire. The ML firewall
-# operates on encrypted packets WITHOUT decryption. This RBAC engine operates
-# within the proxy where payloads are naturally decrypted after TLS termination.
+# SECURITY MODEL:
+#   Layer 1 (Wire): ML firewall classifies encrypted traffic patterns
+#   Layer 2 (App):  This RBAC engine inspects decrypted JSON-RPC payloads
+#   Together they provide defense-in-depth against unauthorized MCP usage.
 # ============================================================================
 
 # ── Role Definitions ─────────────────────────────────────────────────────────
-# Each role specifies which JSON-RPC methods and tool names are permitted.
+# Each role specifies:
+#   - allowed_methods: Which JSON-RPC methods can be called
+#   - allowed_tools:   Which tool names are permitted for tools/call
+#   - denied_tools:    Explicit deny list (takes priority over allowed_tools)
+#   - rate_limit:      Max requests per minute (0 = unlimited)
+#
 # Use "*" as a wildcard to allow everything.
-# Use "prefix/*" to match all methods starting with a prefix (e.g., "notifications/*").
+# Use "prefix/*" for prefix matching (e.g., "notifications/*").
 roles:
   readonly:
-    # MCP JSON-RPC methods allowed for read-only clients
-    # NOTE: "tools/call" is allowed at the method level; the tool-level
-    # filter below (allowed_tools) restricts WHICH tools can be invoked.
+    description: "Read-only access — can browse and search but cannot modify any data"
     allowed_methods:
       - "initialize"
       - "ping"
       - "tools/list"
-      - "tools/call"                 # Allowed at method level; filtered by allowed_tools
+      - "tools/call"
       - "resources/list"
       - "resources/read"
       - "prompts/list"
       - "prompts/get"
-      - "notifications/*"            # All notification methods (client -> server)
+      - "notifications/*"
       - "completion/complete"
-
-    # When method is "tools/call", only these tool names are permitted.
-    # Write/mutation tools (create_entities, write_file, etc.) are implicitly denied.
     allowed_tools:
       - "list_directory"
       - "read_file"
@@ -44,10 +44,47 @@ roles:
       - "search"
       - "fetch"
       - "tavily-search"
+    denied_tools: []             # Nothing additionally denied
+    rate_limit: 30               # 30 requests per minute
+
+  analyst:
+    description: "Analyst access — can read, search, and create entities but cannot write files or delete"
+    allowed_methods:
+      - "initialize"
+      - "ping"
+      - "tools/list"
+      - "tools/call"
+      - "resources/list"
+      - "resources/read"
+      - "resources/subscribe"
+      - "prompts/list"
+      - "prompts/get"
+      - "notifications/*"
+      - "completion/complete"
+    allowed_tools:
+      - "list_directory"
+      - "read_file"
+      - "get_file_info"
+      - "list_allowed_directories"
+      - "search_repositories"
+      - "get_file_contents"
+      - "search"
+      - "fetch"
+      - "tavily-search"
+      - "create_entities"        # Can CREATE knowledge graph entities
+      - "search_nodes"
+      - "open_nodes"
+    denied_tools:
+      - "write_file"             # Explicitly denied — cannot write to filesystem
+      - "delete_entities"        # Explicitly denied — cannot destroy data
+    rate_limit: 60               # 60 requests per minute
 
   full:
-    allowed_methods: "*"          # All JSON-RPC methods
-    allowed_tools: "*"            # All tool names
+    description: "Full administrative access — unrestricted"
+    allowed_methods: "*"
+    allowed_tools: "*"
+    denied_tools: []
+    rate_limit: 0                # Unlimited
 
 # ── Client Identity Mapping ──────────────────────────────────────────────────
 # Clients are resolved to roles via two mechanisms (checked in order):
@@ -55,16 +92,14 @@ roles:
 #   2. Source IP address — fallback
 # If neither matches, the default_role is applied.
 clients:
-  # Map API keys to roles (checked first)
   by_api_key:
     "full-access-key-001": "full"
-    "readonly-key-001": "readonly"
+    "analyst-key-001":     "analyst"
+    "readonly-key-001":    "readonly"
 
-  # Map source IPs to roles (checked if no API key match)
   by_ip:
     "10.11.0.30": "full"          # groq-client (legitimate traffic generator)
     "10.11.0.40": "readonly"      # noise-client (restricted access)
     "127.0.0.1":  "full"          # localhost / native mode
 
-  # Role assigned when no IP or API key matches
-  default_role: "readonly"
+  default_role: "readonly"         # Zero-trust: unknown clients are read-only
