@@ -1,104 +1,83 @@
-# Role-Based Access Control (RBAC) & Payload Inspection
+# Encrypted RBAC: Layer 4 Access Control
 
-This document details the new RBAC Proxy integration for the ML Firewall project. It explains the new features, the architectural changes, and exactly how to run the demonstrations for your presentation.
+Traditional Role-Based Access Control (RBAC) relies on Layer 7 proxies. These proxies must decrypt TLS connections, parse HTTP headers, extract API keys, and read JSON payloads to determine if a user has permission to perform an action. This introduces significant latency, creates a single point of failure, and compromises payload privacy.
 
----
-
-## 🌟 New Features Added
-
-### 1. 🛡️ Three-Tier Role Hierarchy (Zero-Trust)
-Instead of a simple "allow/deny all" model, the proxy now enforces an industry-grade role hierarchy:
-- **`FULL` Role**: (Admin) Has unrestricted access to all MCP tools, methods, and servers.
-- **`ANALYST` Role**: (Data Analyst) Can search, read files, and create entities, but is **explicitly denied** from using destructive tools like `write_file` or `delete_entities`.
-- **`READONLY` Role**: Can only perform safe read operations. All write/delete operations are blocked.
-- **Zero-Trust Default**: If a client connects without a recognized API key or IP address, they are automatically downgraded to the `READONLY` role.
-
-### 2. 🔑 API Key Authentication
-The system no longer relies purely on IP addresses (which can be spoofed). It now uses API keys passed via the `X-MCP-API-Key` HTTP header. 
-- The **Groq Client** now automatically sends an admin API key.
-- A new **Restricted Client** runs alongside it using an Analyst API key.
-- API keys strictly override IP-based rules.
-
-### 3. 🔍 Deep Payload & Server Inspection
-The proxy no longer just logs "Port 13000". It intercepts the HTTP payload in real-time, inspects the JSON-RPC body, and logs:
-- The **exact MCP Server** being accessed (e.g., `github`, `fetch`, `filesystem`).
-- The **exact tool** being called (e.g., `search_repositories`).
-- The **JSON arguments** being passed to the tool (e.g., `{"query": "MCP server"}`).
-
-### 4. 📊 Security Audit Reporting
-A new automated reporting script analyzes the proxy logs and generates a visual security audit report showing exactly how many requests were allowed/denied, broken down by role, server, and tool.
+**Encrypted RBAC** represents a paradigm shift. We enforce strict Access Control directly at the Transport Layer (Layer 4) without ever decrypting the traffic.
 
 ---
 
-## 🏗️ Architectural Changes
+## 🏗️ How It Works (Zero-Decryption Architecture)
 
-1. **`proxy/tls_proxy.py`**: Completely rewritten to include the `PolicyEngine`. It intercepts the JSON payload, checks the API key, matches the tool against the `tool_policy.yaml`, and either forwards the request or returns a `403 Forbidden` response.
-2. **`proxy/tool_policy.yaml`**: A new declarative configuration file where the roles and their explicit permissions are defined.
-3. **`groq-client/groq_mcp_client.py`**: Updated to inject the `X-MCP-API-Key` header into every outbound POST request.
-4. **`groq-client/restricted_mcp_client.py`**: A brand new test client that intentionally tries to run malicious/destructive operations (like deleting files) to prove that the firewall blocks them.
-5. **`proxy/audit_report.py`**: A new script to parse the `rbac_audit.jsonl` and `payload_inspection.jsonl` logs and output a clean summary.
+To perform access control, a firewall needs two pieces of information:
+1. **Who is the user?** (Identity)
+2. **What are they trying to do?** (Target)
+
+### 1. Identity Resolution (TCP Headers)
+Even in fully encrypted HTTPS/TLS connections, the underlying IP packet headers remain unencrypted so routers can deliver them. The Rust Live Analyzer extracts the **Source IP Address** directly from the TCP header. 
+This IP is mapped to a predefined security role using Zero-Trust principles (unknown IPs default to `readonly`).
+
+### 2. Target Prediction (Machine Learning)
+Instead of decrypting the payload to read the JSON-RPC method, the ML Firewall analyzes the metadata of the encrypted packet flow:
+* Inter-arrival Times (IAT)
+* Packet Sizes
+* Traffic Direction (Up/Down)
+
+The XGBoost Early-Classification model predicts which MCP server the client is communicating with (e.g., `github`, `filesystem`, `noise`) based purely on these timing and sizing fingerprints.
+
+### 3. The Decision Engine
+The Python FastFlow API (`api.py`) combines the Identity and the Prediction:
+* **Example:** IP `10.11.0.40` is mapped to `readonly`. The ML model predicts the traffic is targeting the `filesystem` server. The policy engine instantly returns **DENY** because `readonly` users cannot access the filesystem.
+* The connection is dropped at the network layer before it ever reaches the application server.
 
 ---
 
-## 🚀 How to Run the Demos
+## 🛡️ Confidence Gating
 
-There are two ways to demonstrate the system to your mentor.
+Machine Learning models operate on probabilities. To prevent falsely blocking a legitimate user early in a connection stream, the Encrypted RBAC engine utilizes **Confidence Gating**:
+* If the ML prediction confidence is `< 40%`, the firewall returns a **WAIT** signal.
+* The Rust kernel module keeps the connection open and captures more packets.
+* Once the packet threshold provides enough features to push the confidence above the threshold, the firewall executes the **ALLOW** or **DENY** rule.
 
-### Option 1: The Live Integrated Demo (Full Architecture)
-This shows the RBAC proxy working alongside Docker, the ML Firewall, and the Groq client in real-time.
+---
 
-1. **Start the containers** (if not already running):
-   ```powershell
-   docker compose up -d mcp-servers noise-server
-   ```
-2. **Launch the Demo** (Run as Administrator):
+## 🚀 Running the Live Demo
+
+The project includes a fully integrated real-time demonstration. 
+
+1. Ensure **Npcap** is installed on your Windows machine (with or without WinPcap API compatibility).
+2. Run the main orchestration script as **Administrator**:
    ```powershell
    .\start_demo.ps1
    ```
-   *Note: If the Rust TUI fails to start, the script will automatically drop into the **RBAC Live Monitor**, which streams proxy decisions (ALLOW/DENY) live to your screen.*
-3. **Stop the Demo**: Press `Ctrl+C`.
-4. **View the Results**:
-   ```powershell
-   proxy\.venv\Scripts\python.exe proxy\audit_report.py
-   ```
+3. The script will orchestrate:
+   - Docker backend servers
+   - The FastFlow ML API (`api.py`)
+   - Simulated traffic clients (`full` admin, `analyst` restricted, and `noise`)
+   - The native Rust packet capture engine (`live-analyzer.exe`) in the background.
 
-### Option 2: The Standalone Demo (Fast & Clean)
-If you just want to explain the RBAC logic without starting Docker or worrying about the rest of the pipeline, use the standalone demo. It spins up a mock backend, tests 5 different security scenarios in 30 seconds, and shuts down safely.
+The foreground terminal will launch the **Live Encrypted RBAC Monitor**, streaming real-time `[ALLOW]`, `[DENY]`, `[WAIT]`, and `[PASS]` decisions as the firewall classifies the encrypted traffic live off the wire.
 
-1. **Run the Standalone Demo**:
-   ```powershell
-   proxy\.venv\Scripts\python.exe proxy\standalone_demo.py
-   ```
-2. **View the Results**:
-   ```powershell
-   proxy\.venv\Scripts\python.exe proxy\audit_report.py
-   ```
+### Simulated Fallback
+If Npcap is missing or you are not running as Administrator, `start_demo.ps1` will seamlessly fall back to `rust_simulator.py`. This streams raw dataset features to the ML API to guarantee the presentation runs flawlessly regardless of environment constraints.
 
 ---
 
-## 🗣️ Mentor Talking Points: "Why are we looking at the payload if the project says 'No Decryption'?"
+## 📊 Security Auditing
 
-This is the most important question your mentor will ask! Here is exactly how to answer it:
+Because Layer 4 drops happen before the application layer logs a request, the ML API maintains a strict, unified security audit trail.
 
-**The project architecture is a "Defense in Depth" model with two distinct layers:**
+Run the audit report generator to view a formatted breakdown of all network-layer policy decisions:
+```powershell
+proxy\.venv\Scripts\python.exe proxy\audit_report.py
+```
 
-1. **Layer 4: Network Perimeter (Rust ML Firewall)**
-   - This is what the core project is about. The Rust analyzer sits on the network wire.
-   - **Crucially: It does NOT decrypt anything.** It uses Machine Learning to look at packet sizes, inter-arrival times, and network flow metadata to classify traffic as MCP or Noise. 
+### Sample Output:
+```
+  Traffic Breakdown: 181164 Noise (PASS), 29398 Pending (WAIT)
+  Policy Decisions : 2276 total
+  ████████████████████████████████████████
+  ALLOWED: 1077 (47%)  DENIED: 1199 (53%)
 
-2. **Layer 7: Application Endpoint (The RBAC Proxy we built here)**
-   - Once the ML Firewall allows the traffic through, the packet reaches its final destination: the Application Server.
-   - The application server *has* to terminate the TLS connection (decrypt it) in order to actually serve the request. Our RBAC Proxy sits right here, acting as the "Application Gateway".
-   - Because it is the endpoint, it has the right to inspect the JSON payload and enforce Role-Based Access Control (RBAC).
-
-**The Analogy for your Mentor:**
-> *"The Rust ML Firewall is like a security guard at the front gate of a building. He checks your ID badge and looks at the size of your briefcase, but he isn't allowed to open it (No Decryption).* 
->
-> *Our RBAC Proxy is the bank teller inside the building. Once you get past the guard and hand the briefcase to the teller, the teller opens it, reads the instructions inside (Payload Inspection), and decides if you have the clearance to withdraw that much money."*
-
----
-
-## 🗣️ Other Key Talking Points
-
-1. **Granular Control**: We aren't just blocking IP addresses. Because the RBAC proxy acts as the bank teller, it can allow a Data Analyst to access the `filesystem` server to `read_file`, but actively block them if they try to call `write_file` on that exact same server.
-2. **Compliance & Auditing**: Every single decision the proxy makes is logged to `rbac_audit.jsonl` and `payload_inspection.jsonl`. In enterprise environments, having an immutable audit log of *who* accessed *what tool* with *what payload* is critical for compliance.
+  ── Policy Violations (Blocked at Network Layer) ──
+    ✗ [06:22:56] IP: 10.11.0.40 | Role: readonly → filesystem (conf: 55.6%)
+```

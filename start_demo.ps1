@@ -194,54 +194,61 @@ $script:bgJobs += $proc.Id
 Log-Success "Restricted Client running (PID: $($proc.Id)) [ANALYST - writes will be DENIED]"
 
 # ==============================================================================
-# Phase 4: Rust Live Analyzer TUI (or RBAC Live Monitor fallback)
+# Phase 4: Live Encrypted RBAC Monitor
 # ==============================================================================
-Log-Step "4. Launching Rust Live Analyzer"
+Log-Step "4. Launching Live Encrypted RBAC Monitor"
 
-Log-Warn "The TUI requires Npcap access (Administrator privileges)."
-Log-Info ""
+# Check if Npcap (wpcap.dll) is installed
+$npcapDefault = "$env:SystemRoot\System32\wpcap.dll"
+$npcapSubdir = "$env:SystemRoot\System32\Npcap\wpcap.dll"
+$hasNpcap = $false
 
-# Try to launch the Rust TUI
-$tuiSucceeded = $false
-try {
-    Log-Info "Available network interfaces:"
-    & $rustBinary --list-interfaces 2>$null
+if (Test-Path $npcapDefault) {
+    $hasNpcap = $true
+} elseif (Test-Path $npcapSubdir) {
+    $hasNpcap = $true
+    # Add Npcap folder to PATH so the Rust binary can find the DLL
+    $env:PATH = "$env:SystemRoot\System32\Npcap;$env:PATH"
+    Log-Info "Npcap found in subdirectory. Added to PATH."
+}
 
-    Write-Host ""
-    Write-Host "Starting live analyzer on the Npcap Loopback Adapter..." -ForegroundColor Yellow
-    Write-Host "  (If no loopback adapter, use Wi-Fi or the adapter carrying Docker traffic)" -ForegroundColor DarkGray
-    Write-Host ""
-
+if ($hasNpcap) {
+    Log-Info "Npcap detected. Launching native Rust packet capture in background..."
     $tuiStartTime = Get-Date
-    & $rustBinary --interface "\Device\NPF_Loopback" --inference-url http://localhost:5050
-    $tuiEndTime = Get-Date
-
-    # If the TUI ran for more than 5 seconds, we consider it a success and user just quit.
-    # If it ran for less than 5 seconds, it probably crashed immediately.
-    if (($tuiEndTime - $tuiStartTime).TotalSeconds -gt 5) {
-        $tuiSucceeded = $true
-    } else {
-        Log-Warn "Rust TUI exited almost immediately. Falling back to RBAC Live Monitor..."
-    }
-} catch {
-    Log-Warn "Rust TUI failed to start. Falling back to RBAC Live Monitor..."
-}
-
-if (-not $tuiSucceeded) {
-    Write-Host "`n--- FALLBACK: Live RBAC Monitor ---" -ForegroundColor Cyan
-    Write-Host "Services are running. Waiting for traffic..." -ForegroundColor Gray
-    Write-Host "Press Ctrl+C to stop all services.`n" -ForegroundColor Yellow
-
-    $proxyErrLog = Join-Path $logDir "proxy_err.log"
-    Start-Sleep -Seconds 3
+    $rustProc = Start-Process -FilePath $rustBinary `
+        -ArgumentList "--interface", "\Device\NPF_Loopback", "--inference-url", "http://localhost:5050" `
+        -WorkingDirectory $ProjectRoot `
+        -PassThru -WindowStyle Hidden
     
-    if (Test-Path $proxyErrLog) {
-        Get-Content $proxyErrLog -Wait
-    } else {
-        Write-Host "Could not find proxy log at $proxyErrLog"
-        Read-Host "Press Enter to exit"
+    $script:bgJobs += $rustProc.Id
+    Start-Sleep -Seconds 2
+
+    if ($rustProc.HasExited) {
+        Log-Warn "Rust packet capture failed (possibly not running as Admin). Falling back to Simulator..."
+        $hasNpcap = $false
     }
 }
+
+if (-not $hasNpcap) {
+    Log-Warn "Npcap (wpcap.dll) missing or capture failed. Launching Rust Traffic Simulator..."
+    $simProc = Start-Process -FilePath "python.exe" `
+        -ArgumentList "rust_simulator.py" `
+        -WorkingDirectory $ProjectRoot `
+        -PassThru -WindowStyle Hidden
+    $script:bgJobs += $simProc.Id
+}
+
+Write-Host "`n--- Live Encrypted RBAC Monitor ---" -ForegroundColor Cyan
+Write-Host "Services are running. Waiting for traffic..." -ForegroundColor Gray
+Write-Host "Press Ctrl+C to stop all services.`n" -ForegroundColor Yellow
+
+# Run the Live RBAC Monitor in the foreground
+try {
+    $monitorProc = Start-Process -FilePath "python.exe" `
+        -ArgumentList "live_rbac_monitor.py" `
+        -WorkingDirectory $ProjectRoot `
+        -NoNewWindow -Wait
+} catch {}
 
 # Cleanup all services
 Cleanup

@@ -52,99 +52,80 @@ def generate_report(entries, log_path=None):
     denied = total - allowed
 
     # Per-role stats
-    role_stats = defaultdict(lambda: {"allow": 0, "deny": 0, "tools": Counter()})
+    role_stats = defaultdict(lambda: {"allow": 0, "deny": 0, "wait": 0, "pass": 0, "servers": Counter()})
     denied_attempts = []
-    tool_usage = Counter()
-
+    
     for e in entries:
         role = e.get("role", "unknown")
         decision = e.get("decision", "DENY")
-        tool = e.get("tool", "")
-        method = e.get("method", "")
-
+        server = e.get("predicted_server", "unknown")
+        
         if decision == "ALLOW":
             role_stats[role]["allow"] += 1
-        else:
+        elif decision == "DENY":
             role_stats[role]["deny"] += 1
             denied_attempts.append(e)
+        elif decision == "WAIT":
+            role_stats[role]["wait"] += 1
+        elif decision == "PASS":
+            role_stats[role]["pass"] += 1
 
-        if tool:
-            role_stats[role]["tools"][tool] += 1
-            tool_usage[tool] += 1
+        if server and server != "noise":
+            role_stats[role]["servers"][server] += 1
 
     # ── Print Report ──
-    print(f"\n{B}{C}{'=' * 62}{X}")
-    print(f"{B}{C}   RBAC Security Audit Report{X}")
-    print(f"{B}{C}{'=' * 62}{X}")
+    print(f"\n{B}{C}{'=' * 68}{X}")
+    print(f"{B}{C}   Encrypted RBAC Security Audit Report (Layer 4 Firewall){X}")
+    print(f"{B}{C}{'=' * 68}{X}")
 
     ts_first = entries[0].get("timestamp", "?")
     ts_last = entries[-1].get("timestamp", "?")
     print(f"\n  {D}Period: {ts_first} → {ts_last}{X}")
-    print(f"  {D}Total events: {total}{X}")
+    print(f"  {D}Total connections evaluated: {total}{X}")
 
-    # Summary bar
-    allow_pct = (allowed / total) * 100 if total else 0
-    deny_pct = (denied / total) * 100 if total else 0
+    allowed = sum(1 for e in entries if e.get("decision") == "ALLOW")
+    denied = sum(1 for e in entries if e.get("decision") == "DENY")
+    wait = sum(1 for e in entries if e.get("decision") == "WAIT")
+    passed = sum(1 for e in entries if e.get("decision") == "PASS")
+
+    # Summary bar (we'll just show ALLOW vs DENY for actual policy decisions)
+    policy_total = allowed + denied
+    allow_pct = (allowed / policy_total) * 100 if policy_total else 0
+    deny_pct = (denied / policy_total) * 100 if policy_total else 0
     bar_len = 40
-    allow_bar = int(bar_len * allowed / total) if total else 0
+    allow_bar = int(bar_len * allowed / policy_total) if policy_total else 0
     deny_bar = bar_len - allow_bar
-    print(f"\n  {G}{'█' * allow_bar}{R}{'█' * deny_bar}{X}")
+    print(f"\n  {D}Traffic Breakdown: {passed} Noise (PASS), {wait} Pending (WAIT){X}")
+    print(f"  {D}Policy Decisions : {policy_total} total{X}")
+    print(f"  {G}{'█' * allow_bar}{R}{'█' * deny_bar}{X}")
     print(f"  {G}ALLOWED: {allowed} ({allow_pct:.0f}%){X}  {R}DENIED: {denied} ({deny_pct:.0f}%){X}")
 
     # Per-role breakdown
     print(f"\n{B}  ── Per-Role Breakdown ──{X}\n")
     for role in sorted(role_stats.keys()):
         stats = role_stats[role]
-        r_total = stats["allow"] + stats["deny"]
-        print(f"  {B}{role.upper()}{X} ({r_total} requests)")
-        print(f"    {G}Allowed: {stats['allow']}{X}  {R}Denied: {stats['deny']}{X}")
-        if stats["tools"]:
-            top_tools = stats["tools"].most_common(5)
-            tools_str = ", ".join(f"{t}({c})" for t, c in top_tools)
-            print(f"    Tools used: {tools_str}")
+        r_total = stats["allow"] + stats["deny"] + stats["wait"] + stats["pass"]
+        print(f"  {B}{role.upper()}{X} ({r_total} flows evaluated)")
+        print(f"    {G}Allowed: {stats['allow']}{X}  {R}Denied: {stats['deny']}{X}  {Y}Wait: {stats['wait']}{X}  {D}Pass (Noise): {stats['pass']}{X}")
+        if stats["servers"]:
+            top_servers = stats["servers"].most_common(5)
+            servers_str = ", ".join(f"{s}({c})" for s, c in top_servers)
+            print(f"    Targeted servers: {servers_str}")
         print()
 
     # Denied attempts detail
     if denied_attempts:
-        print(f"{B}  ── Policy Violations (Denied Requests) ──{X}\n")
+        print(f"\n{B}  ── Policy Violations (Blocked at Network Layer) ──{X}\n")
         for e in denied_attempts[-15:]:  # Show last 15
             ts = e.get("timestamp", "?")[11:19]  # Time only
             role = e.get("role", "?")
-            method = e.get("method", "?")
-            tool = e.get("tool", "")
-            reason = e.get("reason", "")
-            tool_str = f" → {tool}" if tool else ""
-            print(f"    {R}✗{X} [{ts}] {D}role={role}{X} {method}{tool_str}")
-            if reason:
-                # Truncate long reasons
-                short = reason[:80] + "..." if len(reason) > 80 else reason
-                print(f"      {Y}{short}{X}")
+            ip = e.get("source_ip", "?")
+            server = e.get("predicted_server", "?")
+            conf = e.get("confidence", 0) * 100
+            print(f"    {R}✗{X} [{ts}] {D}IP: {ip} | Role: {role}{X} → {server} (conf: {conf:.1f}%)")
         if len(denied_attempts) > 15:
             print(f"    {D}... and {len(denied_attempts) - 15} more{X}")
         print()
-
-    # Most targeted tools
-    print(f"{B}  ── Most Used Tools ──{X}\n")
-    for tool, count in tool_usage.most_common(10):
-        bar = "▓" * min(count, 30)
-        print(f"    {tool:30s} {bar} {count}")
-
-    # Per-server breakdown
-    server_stats = defaultdict(lambda: {"allow": 0, "deny": 0})
-    for e in entries:
-        server = e.get("server", "")
-        if server:
-            if e.get("decision") == "ALLOW":
-                server_stats[server]["allow"] += 1
-            else:
-                server_stats[server]["deny"] += 1
-
-    if server_stats:
-        print(f"\n{B}  ── Per-Server Breakdown ──{X}\n")
-        for server in sorted(server_stats.keys()):
-            s = server_stats[server]
-            s_total = s["allow"] + s["deny"]
-            print(f"    {server:15s}  {G}✓{s['allow']:3d}{X}  {R}✗{s['deny']:3d}{X}  (total: {s_total})")
 
     # Payload inspection log
     payload_path = os.path.join(os.path.dirname(log_path), "payload_inspection.jsonl")
@@ -178,9 +159,9 @@ def main():
     if not log_path:
         here = os.path.dirname(os.path.abspath(__file__))
         project = os.path.dirname(here)
-        log_path = os.path.join(project, "logs", "rbac_audit.jsonl")
+        log_path = os.path.join(project, "classifier", "logs", "encrypted_rbac_audit.jsonl")
 
-    print(f"Reading audit log: {log_path}")
+    print(f"Reading Encrypted RBAC audit log: {log_path}")
     entries = load_audit_log(log_path)
     generate_report(entries, log_path)
 
