@@ -30,6 +30,8 @@ docker compose up --build -d
 # Optionally, you can stream logs to the file in the background if you need them:
 docker compose logs -f > /tmp/hpe_unified_logs.txt 2>&1 &
 
-echo "Generating traffic for 2 minutes... (Hit Ctrl+C to stop early)"
-# 2 minutes = 120 seconds
-sleep 120
+DURATION=${1:-1800}
+echo "Generating traffic for ${DURATION} seconds... (Hit Ctrl+C to stop early)"
+# Realistic MCP flow estimate: ~2,500–4,500 total flows (groq-client + chaos-client)
+# constrained by Groq API rate limits (~30 req/min) and lognormal inter-call delays.
+sleep $DURATION

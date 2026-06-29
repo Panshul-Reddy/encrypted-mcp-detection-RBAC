@@ -86,7 +86,9 @@ pub fn open_offline(path: &Path) -> Result<pcap::Capture<pcap::Offline>> {
             .context("Failed to decompress .pcap.gz")?;
 
 
-        let tmp_path = path.with_extension("tmp.pcap");
+        // Use a PID-suffixed temp path to prevent collision when two
+        // replay processes decompress different .pcap.gz files simultaneously.
+        let tmp_path = path.with_extension(format!("{}.tmp.pcap", std::process::id()));
         let mut tmp_file = std::fs::File::create(&tmp_path)?;
         tmp_file.write_all(&decompressed)?;
         drop(tmp_file);

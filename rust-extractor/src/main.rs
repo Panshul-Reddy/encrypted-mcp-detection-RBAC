@@ -393,6 +393,7 @@ async fn run_classification_pipeline(
                     ground_truth: flow.ground_truth_label(),
                     inference_latency: latency,
                     classified_at: Instant::now(),
+                    is_closed: !matches!(finalized.reason, reaper::FinalizationReason::EarlyEvaluation),
                 };
 
                 if prediction.label == 0 {
@@ -431,14 +432,21 @@ async fn run_csv_pipeline(mut rx: mpsc::Receiver<FinalizedFlow>, csv_path: PathB
         }
     };
     
-    // Write header
-    write!(file, "flow_display,label,").unwrap();
+    // Write header — start_ts is included as a session identifier for train/test splitting.
+    // Using flow_display + start_ts as the session key is collision-free even with long
+    // captures where the OS may reuse ephemeral ports (the previous composite key using
+    // seq_iat_01/02 floats was fragile and would collide with more data).
+    write!(file, "flow_display,label,start_ts,eval_n,").unwrap();
     write!(file, "{}", FEATURE_NAMES.join(",")).unwrap();
     writeln!(file).unwrap();
 
     let mut count = 0;
     while let Some(finalized) = rx.recv().await {
         let flow = finalized.flow;
+        let eval_n = match finalized.reason {
+            reaper::FinalizationReason::EarlyEvaluation => format!("n{}", flow.pkt_count()),
+            _ => "final".to_string(),
+        };
         let features = match extract_features(&flow) {
             Some(f) => f,
             None => continue,
@@ -447,7 +455,7 @@ async fn run_csv_pipeline(mut rx: mpsc::Receiver<FinalizedFlow>, csv_path: PathB
         if label == 255 {
             continue; // Skip unknown traffic
         }
-        write!(file, "{},{},", flow.key.display(), label).unwrap();
+        write!(file, "{},{},{},{},", flow.key.display(), label, flow.start_ts, eval_n).unwrap();
         let feat_strs: Vec<String> = features.iter().map(|f| f.to_string()).collect();
         write!(file, "{}", feat_strs.join(",")).unwrap();
         writeln!(file).unwrap();

@@ -81,7 +81,7 @@ impl InferenceClient {
     /// Classify a single flow's feature vector.
     pub async fn predict(
         &self,
-        features: &[f64; 105],
+        features: &[f64; 115],
     ) -> Result<(PredictResponse, Duration)> {
         let url = format!("{}/predict", self.config.base_url);
         let body = PredictRequest {
@@ -122,7 +122,7 @@ impl InferenceClient {
     /// Classify a batch of feature vectors.
     pub async fn predict_batch(
         &self,
-        batch: &[[f64; 105]],
+        batch: &[[f64; 115]],
     ) -> Result<(Vec<PredictResponse>, Duration)> {
         let url = format!("{}/predict_batch", self.config.base_url);
         let body = PredictBatchRequest {

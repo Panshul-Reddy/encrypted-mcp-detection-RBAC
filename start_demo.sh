@@ -139,7 +139,7 @@ log_info "All logs are being written to ${BOLD}${LOG_DIR}${RESET}"
 
 # Start services using the helper
 start_service "classifier" "FastFlow API" "$LOG_DIR/api.log" uvicorn api:app --port 5050
-start_service "proxy" "Native TLS Proxy" "$LOG_DIR/proxy.log" python3 tls_proxy.py --cert ../nginx/ssl/mcp.crt --key ../nginx/ssl/mcp.key --mappings "8440:3000,8441:3001,8442:3002,8443:3003,8444:3004,8445:3005" --backend-host 127.0.0.1
+start_service "proxy" "Native TLS Proxy" "$LOG_DIR/proxy.log" python3 tls_proxy.py --cert ../nginx/ssl/mcp.crt --key ../nginx/ssl/mcp.key --mappings "8440:3000,8441:3001,8442:3002,8443:3003,8444:3004,8445:3005,9443:9444" --backend-host 127.0.0.1
 
 export VM1_IP=127.0.0.1
 start_service "groq-client" "Groq Traffic Generator" "$LOG_DIR/groq.log" python3 groq_mcp_client.py

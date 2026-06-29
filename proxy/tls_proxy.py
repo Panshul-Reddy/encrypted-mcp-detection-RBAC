@@ -112,8 +112,12 @@ async def main():
     tasks = []
     mappings = args.mappings.split(",")
     for m in mappings:
-        listen_p, backend_p = m.split(":")
-        tasks.append(asyncio.create_task(serve_port(int(listen_p), int(backend_p), args.cert, args.key, args.backend_host)))
+        parts = m.split(":")
+        if len(parts) == 3:
+            listen_p, b_host, backend_p = int(parts[0]), parts[1], int(parts[2])
+        else:
+            listen_p, b_host, backend_p = int(parts[0]), args.backend_host, int(parts[1])
+        tasks.append(asyncio.create_task(serve_port(listen_p, backend_p, args.cert, args.key, b_host)))
 
     await asyncio.gather(*tasks)
 

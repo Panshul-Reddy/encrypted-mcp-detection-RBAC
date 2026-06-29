@@ -1,0 +1,26 @@
+services:
+  noise-client:
+    command: python hard_client.py
+  chaos-client:
+    # Disable the MCP chaos client so we only get pure groq-client MCP traffic
+    command: tail -f /dev/null
+  mcp-tap:
+    volumes:
+      - ./capture_test:/capture
+    command: >
+      bash -ec "
+        echo '[mcp-tap] Waiting for tls-proxy...';
+        sleep 5;
+        echo '[mcp-tap] Capturing tcp on eth0';
+        tcpdump -i eth0 -s 0 -B 131072 'tcp port 8440 or tcp port 8441 or tcp port 8442 or tcp port 8443 or tcp port 8444 or tcp port 8445' -w /capture/mcp_test_$$(date +%Y%m%d_%H%M%S).pcap;
+      "
+  noise-tap:
+    volumes:
+      - ./capture_test:/capture
+    command: >
+      bash -ec "
+        echo '[noise-tap] Waiting for tls-proxy...';
+        sleep 5;
+        echo '[noise-tap] Capturing tcp/9443 on eth0';
+        tcpdump -i eth0 -s 0 -B 131072 'tcp port 9443' -w /capture/noise_test_$$(date +%Y%m%d_%H%M%S).pcap;
+      "

@@ -30,17 +30,17 @@ services:
       - EXA_API_KEY=${EXA_API_KEY:-"dummy"}
       - TAVILY_API_KEY=${TAVILY_API_KEY:-"dummy"}
 
-  # Noise HTTPS/WSS/JSON-RPC server (Anirudh's)
+  # Noise HTTP/WS/JSON-RPC server (Anirudh's)
   noise-server:
     build: ./noise-server
     container_name: noise-server
+    ports:
+      - "9444:9444"
     networks:
       mcp-lab-net:
         ipv4_address: 10.11.0.20
-    ports:
-      - "9443:9443"
 
-  # Groq MCP Client (Mrunal's)
+  # Groq MCP Client (primary — single-turn + multi-turn sessions)
   groq-client:
     build: ./groq-client
     container_name: groq-client
@@ -54,17 +54,39 @@ services:
       - GROQ_API_KEY=${GROQ_API_KEY:-"dummy"}
       - PYTHONUNBUFFERED=1
 
+  # Chaos MCP Client — adversarial / zero-day traffic generator.
+  # Runs in parallel with groq-client to increase MCP traffic volume and diversity.
+  # Uses a distinct IP (10.11.0.31) so the training data sees MCP from two source
+  # addresses, partially addressing Issue 6 (single source IP generalisation risk).
+  # The ground_truth_label() subnet check (10.11.0.0/24) correctly labels both .30
+  # and .31 as internal MCP clients.
+  chaos-client:
+    build: ./groq-client
+    container_name: chaos-client
+    command: python chaos_mcp_client.py
+    depends_on:
+      - tls-proxy
+    networks:
+      mcp-lab-net:
+        ipv4_address: 10.11.0.31
+    environment:
+      - VM1_IP=10.11.0.5
+      - GROQ_API_KEY=${GROQ_API_KEY:-"dummy"}
+      - PYTHONUNBUFFERED=1
+
+
   # Noise client (Anirudh's + External WAN + Adversarial)
   noise-client:
     build: ./noise-client
     container_name: noise-client
     depends_on:
+      - tls-proxy
       - noise-server
     networks:
       mcp-lab-net:
         ipv4_address: 10.11.0.40
     environment:
-      - NOISE_SERVER=https://10.11.0.20:9443
+      - NOISE_SERVER=https://10.11.0.5:9443
 
   # Packet capture sidecars (Rust Core will do this later, but we use netshoot for dataset gen)
   mcp-tap:
@@ -88,12 +110,12 @@ services:
   noise-tap:
     image: nicolaka/netshoot
     container_name: noise-tap
-    network_mode: "service:noise-server"
+    network_mode: "service:tls-proxy"
     cap_add:
       - NET_RAW
     command: >
       bash -ec "
-        echo '[noise-tap] Waiting for noise-server...';
+        echo '[noise-tap] Waiting for tls-proxy...';
         sleep 5;
         echo '[noise-tap] Capturing tcp/9443 on eth0';
         tcpdump -i eth0 -s 0 -B 131072 'tcp port 9443' -G 600 -W 288 -w /capture/noise_%Y%m%d_%H%M%S.pcap -z gzip;
@@ -101,7 +123,7 @@ services:
     volumes:
       - ./capture:/capture
     depends_on:
-      - noise-server
+      - tls-proxy
 
 networks:
   mcp-lab-net:
