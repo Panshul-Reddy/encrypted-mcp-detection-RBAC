@@ -380,8 +380,9 @@ async fn run_classification_pipeline(
             None => continue,
         };
 
+        let src_ip_str = std::net::Ipv4Addr::from(flow.key.src_ip).to_string();
 
-        match client.predict(&features).await {
+        match client.predict(&features, &src_ip_str).await {
             Ok((prediction, latency)) => {
                 let classified = ClassifiedFlow {
                     flow_display: flow.key.display(),
@@ -396,13 +397,20 @@ async fn run_classification_pipeline(
                     is_closed: !matches!(finalized.reason, reaper::FinalizationReason::EarlyEvaluation),
                 };
 
-                if prediction.label == 0 {
+                // Merge: Trigger Mid-Stream Kill if RBAC issues a DENY
+                let should_kill = if let Some(rbac) = &prediction.rbac_decision {
+                    rbac == "DENY"
+                } else {
+                    prediction.label == 0 // Fallback to dropping noise if no RBAC
+                };
+
+                if should_kill {
                     if let Some(ref sock) = udp_socket {
-                        let kill_cmd = format!("KILL {}:{}", flow.key.src_ip, flow.key.src_port);
+                        let kill_cmd = format!("KILL {}:{}", src_ip_str, flow.key.src_port);
                         if let Err(e) = sock.send_to(kill_cmd.as_bytes(), proxy_addr).await {
                             warn!("Failed to send KILL command to proxy: {}", e);
                         } else {
-                            info!("Sent mid-stream KILL for flow {}", flow.key.display());
+                            info!("Sent mid-stream KILL for flow {} (RBAC/Noise)", flow.key.display());
                         }
                     }
                 }

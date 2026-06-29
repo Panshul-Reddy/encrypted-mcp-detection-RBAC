@@ -29,11 +29,12 @@ impl Default for InferenceConfig {
 #[derive(Debug, Serialize)]
 struct PredictRequest {
     features: Vec<f64>,
+    source_ip: String,
 }
 
 #[derive(Debug, Serialize)]
 struct PredictBatchRequest {
-    batch: Vec<Vec<f64>>,
+    batch: Vec<PredictRequest>,
 }
 
 /// Single classification response.
@@ -41,6 +42,7 @@ struct PredictBatchRequest {
 pub struct PredictResponse {
     pub label: u8,
     pub proba: [f64; 2],
+    pub rbac_decision: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -82,10 +84,12 @@ impl InferenceClient {
     pub async fn predict(
         &self,
         features: &[f64; 115],
+        source_ip: &str,
     ) -> Result<(PredictResponse, Duration)> {
         let url = format!("{}/predict", self.config.base_url);
         let body = PredictRequest {
             features: features.to_vec(),
+            source_ip: source_ip.to_string(),
         };
 
         let start = Instant::now();
@@ -122,11 +126,11 @@ impl InferenceClient {
     /// Classify a batch of feature vectors.
     pub async fn predict_batch(
         &self,
-        batch: &[[f64; 115]],
+        batch: &[(&[f64; 115], &str)],
     ) -> Result<(Vec<PredictResponse>, Duration)> {
         let url = format!("{}/predict_batch", self.config.base_url);
         let body = PredictBatchRequest {
-            batch: batch.iter().map(|f| f.to_vec()).collect(),
+            batch: batch.iter().map(|(f, ip)| PredictRequest { features: f.to_vec(), source_ip: ip.to_string() }).collect(),
         };
 
         let start = Instant::now();
