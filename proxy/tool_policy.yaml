@@ -1,0 +1,105 @@
+# ============================================================================
+# MCP Tool-Level Access Control Policy (v2)
+# ============================================================================
+#
+# This policy file controls which MCP tools each client can invoke.
+# It is loaded by the TLS proxy at startup and enforced at the application
+# layer INSIDE the proxy, where TLS has already been terminated.
+#
+# SECURITY MODEL:
+#   Layer 1 (Wire): ML firewall classifies encrypted traffic patterns
+#   Layer 2 (App):  This RBAC engine inspects decrypted JSON-RPC payloads
+#   Together they provide defense-in-depth against unauthorized MCP usage.
+# ============================================================================
+
+# ── Role Definitions ─────────────────────────────────────────────────────────
+# Each role specifies:
+#   - allowed_methods: Which JSON-RPC methods can be called
+#   - allowed_tools:   Which tool names are permitted for tools/call
+#   - denied_tools:    Explicit deny list (takes priority over allowed_tools)
+#   - rate_limit:      Max requests per minute (0 = unlimited)
+#
+# Use "*" as a wildcard to allow everything.
+# Use "prefix/*" for prefix matching (e.g., "notifications/*").
+roles:
+  readonly:
+    description: "Read-only access — can browse and search but cannot modify any data"
+    allowed_methods:
+      - "initialize"
+      - "ping"
+      - "tools/list"
+      - "tools/call"
+      - "resources/list"
+      - "resources/read"
+      - "prompts/list"
+      - "prompts/get"
+      - "notifications/*"
+      - "completion/complete"
+    allowed_tools:
+      - "list_directory"
+      - "read_file"
+      - "get_file_info"
+      - "list_allowed_directories"
+      - "search_repositories"
+      - "search"
+      - "fetch"
+      - "tavily-search"
+    denied_tools: []             # Nothing additionally denied
+    rate_limit: 30               # 30 requests per minute
+
+  analyst:
+    description: "Analyst access — can read, search, and create entities but cannot write files or delete"
+    allowed_methods:
+      - "initialize"
+      - "ping"
+      - "tools/list"
+      - "tools/call"
+      - "resources/list"
+      - "resources/read"
+      - "resources/subscribe"
+      - "prompts/list"
+      - "prompts/get"
+      - "notifications/*"
+      - "completion/complete"
+    allowed_tools:
+      - "list_directory"
+      - "read_file"
+      - "get_file_info"
+      - "list_allowed_directories"
+      - "search_repositories"
+      - "get_file_contents"
+      - "search"
+      - "fetch"
+      - "tavily-search"
+      - "create_entities"        # Can CREATE knowledge graph entities
+      - "search_nodes"
+      - "open_nodes"
+    denied_tools:
+      - "write_file"             # Explicitly denied — cannot write to filesystem
+      - "delete_entities"        # Explicitly denied — cannot destroy data
+    rate_limit: 60               # 60 requests per minute
+
+  full:
+    description: "Full administrative access — unrestricted"
+    allowed_methods: "*"
+    allowed_tools: "*"
+    denied_tools: []
+    rate_limit: 0                # Unlimited
+
+# ── Client Identity Mapping ──────────────────────────────────────────────────
+# Clients are resolved to roles via two mechanisms (checked in order):
+#   1. API key (X-MCP-API-Key HTTP header) — highest priority
+#   2. Source IP address — fallback
+# If neither matches, the default_role is applied.
+clients:
+  by_api_key:
+    "full-access-key-001": "full"
+    "analyst-key-001":     "analyst"
+    "readonly-key-001":    "readonly"
+
+  by_ip:
+    "10.11.0.30": "full"          # groq-client (legitimate traffic generator)
+    "10.11.0.40": "readonly"      # noise-client (restricted access)
+    "127.0.0.1":  "full"          # localhost / native mode
+
+  default_role: "readonly"         # Zero-trust: unknown clients are read-only

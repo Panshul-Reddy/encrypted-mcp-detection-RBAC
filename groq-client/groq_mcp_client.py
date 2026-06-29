@@ -66,6 +66,9 @@ SERVERS = {
     "tavily":     f"https://{VM1_IP}:8445",
 }
 
+# MCP API key for RBAC authentication (sent as X-MCP-API-Key header)
+MCP_API_KEY = os.environ.get("MCP_API_KEY", "full-access-key-001")
+
 client = openai.OpenAI(
     api_key=GROQ_API_KEY,
     base_url="https://api.groq.com/openai/v1"
