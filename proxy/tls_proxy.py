@@ -659,7 +659,7 @@ async def main():
             listen_p, b_host, backend_p = int(parts[0]), parts[1], int(parts[2])
         else:
             listen_p, b_host, backend_p = int(parts[0]), args.backend_host, int(parts[1])
-        tasks.append(asyncio.create_task(serve_port(listen_p, backend_p, args.cert, args.key, b_host)))
+        tasks.append(asyncio.create_task(serve_port(listen_p, backend_p, args.cert, args.key, b_host, policy=policy)))
 
     await asyncio.gather(*tasks)
 
