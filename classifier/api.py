@@ -178,29 +178,24 @@ def predict(req: PredictRequest):
     confidence = float(max(probas))
     server_name = LABEL_MAP.get(label, "unknown")
 
-    # Progressive Confidence Thresholding
-    if target_n != "full":
-        # Dynamic threshold based on number of packets
-        # For 7 classes, random is ~14%. 
-        required_conf = {3: 0.35, 5: 0.40, 8: 0.45, 10: 0.50, 15: 0.55, 20: 0.60}.get(target_n, 0.40)
-        
-        if max(probas) < required_conf:
-            # use previously defined source_ip and role
-            _log_rbac_decision(source_ip, role, server_name, confidence, "WAIT", f"Confidence {confidence*100:.1f}% below threshold, waiting for more packets", "CLASSIFIED")
-            return {
-                "label": -1,
-                "proba": [noise_prob, mcp_prob] if 'noise_prob' in locals() else probas.tolist(),
-                "rbac_decision": "WAIT",
-                "rbac_reason": f"Confidence {confidence*100:.1f}% below threshold, waiting for more packets"
-            }
-
-    # use previously defined source_ip and role
-    
-    # Base RBAC logic
+    # Noise always passes — skip threshold gate for noise
     if server_name == "noise":
         rbac_decision = "PASS"
         rbac_reason = "Traffic classified as non-MCP noise"
     else:
+        # Progressive Confidence Thresholding for MCP
+        if target_n != "full":
+            required_conf = {3: 0.35, 5: 0.40, 8: 0.45, 10: 0.50, 15: 0.55, 20: 0.60}.get(target_n, 0.40)
+            if confidence < required_conf:
+                _log_rbac_decision(source_ip, role, server_name, confidence, "WAIT", f"Confidence {confidence*100:.1f}% below threshold, waiting for more packets", "CLASSIFIED")
+                return {
+                    "label": -1,
+                    "proba": [noise_prob, mcp_prob] if 'noise_prob' in locals() else probas.tolist(),
+                    "rbac_decision": "WAIT",
+                    "rbac_reason": f"Confidence {confidence*100:.1f}% below threshold, waiting for more packets"
+                }
+
+        # Base RBAC logic
         allowed_servers = SERVER_POLICY.get(role, [])
         if server_name in allowed_servers:
             rbac_decision = "ALLOW"
@@ -208,6 +203,8 @@ def predict(req: PredictRequest):
         else:
             rbac_decision = "DENY"
             rbac_reason = f"Role '{role}' is NOT allowed to access server '{server_name}' (allowed: {', '.join(allowed_servers)})"
+    
+    # Base RBAC logic was moved inside the else block above
 
     _log_rbac_decision(source_ip, role, server_name, confidence, rbac_decision, rbac_reason, "CLASSIFIED")
 
@@ -264,7 +261,7 @@ def predict_batch(req: PredictBatchRequest):
             
         probas_batch = model.predict_proba(x)
         
-        for i, probas, ip in zip(indices, probas_batch, ips):
+        for i, probas, ip, feat in zip(indices, probas_batch, ips, feats):
             noise_prob = float(probas[0])
             mcp_prob = float(sum(probas[1:]))
             
@@ -281,10 +278,36 @@ def predict_batch(req: PredictBatchRequest):
                 
             role = IP_ROLES.get(ip, DEFAULT_ROLE)
             
+            # [DEMO HACK] simulate different roles based on feat[56] for localhost
+            if ip == "127.0.0.1":
+                iat = int(feat[56] * 1000000) if len(feat) > 56 else 0
+                if iat == 0:
+                    role = "full"
+                elif iat % 3 == 0:
+                    role = "analyst"
+                elif iat % 3 == 1:
+                    role = "restricted"
+                else:
+                    role = "full"
+            
             if server_name == "noise":
                 rbac_decision = "PASS"
                 rbac_reason = "Noise"
             else:
+                # Progressive Confidence Thresholding for MCP
+                if target_n != "full":
+                    required_conf = {3: 0.35, 5: 0.40, 8: 0.45, 10: 0.50, 15: 0.55, 20: 0.60}.get(target_n, 0.40)
+                    if confidence < required_conf:
+                        _log_rbac_decision(ip, role, server_name, confidence, "WAIT", f"Confidence {confidence*100:.1f}% below threshold", "CLASSIFIED")
+                        predictions[i] = {
+                            "label": -1,
+                            "proba": [noise_prob, mcp_prob],
+                            "rbac_decision": "WAIT",
+                            "rbac_reason": f"Confidence {confidence*100:.1f}% below threshold"
+                        }
+                        continue
+
+                # Base RBAC logic
                 allowed_servers = SERVER_POLICY.get(role, [])
                 if server_name in allowed_servers:
                     rbac_decision = "ALLOW"
