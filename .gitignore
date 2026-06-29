@@ -27,9 +27,6 @@ rust-extractor/target/
 # models
 classifier/models/*.joblib
 
-# datasets
-/*.csv
-
 # IDE
 .vscode/
 .idea/
