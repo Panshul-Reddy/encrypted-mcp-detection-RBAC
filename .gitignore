@@ -3,10 +3,18 @@
 
 # PCAP Data
 capture/
+capture_test/
+*.pcap
+*.pcap.gz
+
+# Node
+node_modules/
 
 # Python
 __pycache__/
 *.pyc
+.venv/
+venv/
 */.venv/
 
 # Rust
@@ -14,3 +22,13 @@ rust-extractor/target/
 
 # logs
 */*.log
+*.log
+
+# models
+classifier/models/*.joblib
+
+# IDE
+.vscode/
+.idea/
+
+*.DS_Store

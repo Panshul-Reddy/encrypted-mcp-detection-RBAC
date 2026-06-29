@@ -380,8 +380,9 @@ async fn run_classification_pipeline(
             None => continue,
         };
 
+        let src_ip_str = std::net::Ipv4Addr::from(flow.key.src_ip).to_string();
 
-        match client.predict(&features).await {
+        match client.predict(&features, &src_ip_str).await {
             Ok((prediction, latency)) => {
                 let classified = ClassifiedFlow {
                     flow_display: flow.key.display(),
@@ -393,15 +394,23 @@ async fn run_classification_pipeline(
                     ground_truth: flow.ground_truth_label(),
                     inference_latency: latency,
                     classified_at: Instant::now(),
+                    is_closed: !matches!(finalized.reason, reaper::FinalizationReason::EarlyEvaluation),
                 };
 
-                if prediction.label == 0 {
+                // Merge: Trigger Mid-Stream Kill if RBAC issues a DENY
+                let should_kill = if let Some(rbac) = &prediction.rbac_decision {
+                    rbac == "DENY"
+                } else {
+                    prediction.label == 0 // Fallback to dropping noise if no RBAC
+                };
+
+                if should_kill {
                     if let Some(ref sock) = udp_socket {
-                        let kill_cmd = format!("KILL {}:{}", flow.key.src_ip, flow.key.src_port);
+                        let kill_cmd = format!("KILL {}:{}", src_ip_str, flow.key.src_port);
                         if let Err(e) = sock.send_to(kill_cmd.as_bytes(), proxy_addr).await {
                             warn!("Failed to send KILL command to proxy: {}", e);
                         } else {
-                            info!("Sent mid-stream KILL for flow {}", flow.key.display());
+                            info!("Sent mid-stream KILL for flow {} (RBAC/Noise)", flow.key.display());
                         }
                     }
                 }
@@ -431,14 +440,21 @@ async fn run_csv_pipeline(mut rx: mpsc::Receiver<FinalizedFlow>, csv_path: PathB
         }
     };
     
-    // Write header
-    write!(file, "flow_display,label,").unwrap();
+    // Write header — start_ts is included as a session identifier for train/test splitting.
+    // Using flow_display + start_ts as the session key is collision-free even with long
+    // captures where the OS may reuse ephemeral ports (the previous composite key using
+    // seq_iat_01/02 floats was fragile and would collide with more data).
+    write!(file, "flow_display,label,start_ts,eval_n,").unwrap();
     write!(file, "{}", FEATURE_NAMES.join(",")).unwrap();
     writeln!(file).unwrap();
 
     let mut count = 0;
     while let Some(finalized) = rx.recv().await {
         let flow = finalized.flow;
+        let eval_n = match finalized.reason {
+            reaper::FinalizationReason::EarlyEvaluation => format!("n{}", flow.pkt_count()),
+            _ => "final".to_string(),
+        };
         let features = match extract_features(&flow) {
             Some(f) => f,
             None => continue,
@@ -447,7 +463,7 @@ async fn run_csv_pipeline(mut rx: mpsc::Receiver<FinalizedFlow>, csv_path: PathB
         if label == 255 {
             continue; // Skip unknown traffic
         }
-        write!(file, "{},{},", flow.key.display(), label).unwrap();
+        write!(file, "{},{},{},{},", flow.key.display(), label, flow.start_ts, eval_n).unwrap();
         let feat_strs: Vec<String> = features.iter().map(|f| f.to_string()).collect();
         write!(file, "{}", feat_strs.join(",")).unwrap();
         writeln!(file).unwrap();

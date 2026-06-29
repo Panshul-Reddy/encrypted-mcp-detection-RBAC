@@ -652,12 +652,14 @@ async def main():
 
     # ── Start proxy listeners ────────────────────────────────────────────
     tasks = []
-    for mapping in args.mappings.split(","):
-        listen_p, backend_p = mapping.split(":")
-        tasks.append(asyncio.create_task(
-            serve_port(int(listen_p), int(backend_p),
-                       args.cert, args.key, args.backend_host, policy)
-        ))
+    mappings = args.mappings.split(",")
+    for m in mappings:
+        parts = m.split(":")
+        if len(parts) == 3:
+            listen_p, b_host, backend_p = int(parts[0]), parts[1], int(parts[2])
+        else:
+            listen_p, b_host, backend_p = int(parts[0]), args.backend_host, int(parts[1])
+        tasks.append(asyncio.create_task(serve_port(listen_p, backend_p, args.cert, args.key, b_host)))
 
     await asyncio.gather(*tasks)
 

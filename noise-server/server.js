@@ -1,10 +1,10 @@
-import https        from "https";
+import http         from "http";
 import fs           from "fs";
 import crypto       from "crypto";
 import express      from "express";
 import { WebSocketServer } from "ws";
 
-const PORT = 9443;
+const PORT = 9444;
 const app  = express();
 app.use(express.json({ limit: "1mb" }));
 
@@ -299,13 +299,10 @@ app.post("/jsonrpc", async (req, res) => {
 
 // HTTPS server and WebSocket upgrade
 
-const httpsServer = https.createServer({
-  key:  fs.readFileSync("key.pem"),
-  cert: fs.readFileSync("cert.pem"),
-}, app);
+const httpServer = http.createServer(app);
 
-// WebSocket server attached to the same HTTPS server (WSS).
-const wss = new WebSocketServer({ server: httpsServer, path: "/ws" });
+// WebSocket server attached to the same HTTP server (WS).
+const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
 
 wss.on("connection", (ws, req) => {
   wsClients.add(ws);
@@ -357,8 +354,8 @@ wss.on("connection", (ws, req) => {
   });
 });
 
-httpsServer.listen(PORT, () => {
-  console.log(`[noise-server] HTTPS+WSS listening on port ${PORT}`);
+httpServer.listen(PORT, () => {
+  console.log(`[noise-server] HTTP+WS listening on port ${PORT}`);
   console.log(`[noise-server] Endpoints: /api/fast /api/data /api/submit /api/poll`);
   console.log(`[noise-server]            /stream/chunked /stream/sse  wss://.../ws`);
   console.log(`[noise-server]            /jsonrpc (JSON-RPC 2.0 hard negative)`);

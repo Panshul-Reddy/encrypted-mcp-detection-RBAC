@@ -1,6 +1,6 @@
 //! TUI dashboard — live flow classification display using ratatui.
 
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -30,6 +30,7 @@ pub struct ClassifiedFlow {
     pub ground_truth: Option<u8>,
     pub inference_latency: Duration,
     pub classified_at: Instant,
+    pub is_closed: bool,
 }
 
 
@@ -92,6 +93,7 @@ impl FilterMode {
 pub struct TuiState {
 
     pub flows: VecDeque<ClassifiedFlow>,
+    pub active_predictions: HashMap<String, (u8, Option<u8>)>,
 
     pub latency_samples: VecDeque<Duration>,
 
@@ -119,6 +121,7 @@ impl TuiState {
     pub fn new(replay_mode: bool) -> Self {
         Self {
             flows: VecDeque::new(),
+            active_predictions: HashMap::new(),
             latency_samples: VecDeque::with_capacity(1000),
             total_mcp: 0,
             total_noise: 0,
@@ -136,6 +139,21 @@ impl TuiState {
 
 
     pub fn add_flow(&mut self, flow: ClassifiedFlow) {
+        // Deduplicate using active_predictions
+        if let Some((old_label, old_gt)) = self.active_predictions.get(&flow.flow_display) {
+            if *old_label >= 1 {
+                self.total_mcp = self.total_mcp.saturating_sub(1);
+            } else {
+                self.total_noise = self.total_noise.saturating_sub(1);
+            }
+            
+            if let Some(gt) = old_gt {
+                self.total_with_ground_truth = self.total_with_ground_truth.saturating_sub(1);
+                if (*gt == 0 && *old_label == 0) || (*gt >= 1 && *old_label >= 1) {
+                    self.correct_predictions = self.correct_predictions.saturating_sub(1);
+                }
+            }
+        }
 
         if flow.label >= 1 {
             self.total_mcp += 1;
@@ -150,6 +168,17 @@ impl TuiState {
             if (gt == 0 && flow.label == 0) || (gt >= 1 && flow.label >= 1) {
                 self.correct_predictions += 1;
             }
+        }
+        
+        if flow.is_closed {
+            self.active_predictions.remove(&flow.flow_display);
+        } else {
+            self.active_predictions.insert(flow.flow_display.clone(), (flow.label, flow.ground_truth));
+        }
+
+        // Keep UI table clean
+        if let Some(pos) = self.flows.iter().position(|f| f.flow_display == flow.flow_display) {
+            self.flows.remove(pos);
         }
 
 

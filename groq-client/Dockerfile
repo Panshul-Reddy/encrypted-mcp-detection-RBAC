@@ -1,8 +1,8 @@
 FROM python:3.11-slim
 
-RUN pip install requests openai urllib3
-
 WORKDIR /app
-COPY groq_mcp_client.py /app/groq_mcp_client.py
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
 
 CMD ["python", "/app/groq_mcp_client.py"]

@@ -3,7 +3,7 @@ import sys
 import time
 import json
 
-LOG_PATH = os.path.join(os.path.dirname(__file__), "classifier", "logs", "encrypted_rbac_audit.jsonl")
+LOG_PATH = os.path.join(os.path.dirname(__file__), "logs", "encrypted_rbac_audit.jsonl")
 
 def main():
     print()

@@ -14,6 +14,13 @@ pub const MCP_PORT: u16 = 8440;
 pub const NOISE_IP: Ipv4Addr = Ipv4Addr::new(10, 11, 0, 20);
 pub const NOISE_PORT: u16 = 9443;
 
+/// Internal client subnet: 10.11.0.0/24.
+/// MCP labels (1–6) are only assigned when the source IP falls within this subnet.
+/// External IPs (e.g. GitHub CDN, Cloudflare) that happen to reach MCP ports
+/// via the proxy are excluded to prevent data contamination.
+pub const MCP_CLIENT_SUBNET: u32 = 0x0A0B_0000; // 10.11.0.0
+pub const MCP_CLIENT_MASK: u32   = 0xFFFF_FF00; // /24
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Direction {
     Up,   // client → server
@@ -64,8 +71,6 @@ pub struct Flow {
 
     seen_appdata: bool,
     pub last_pkt_ts: f64,
-
-    pub first_payload_entropy: f64,
 }
 
 impl Flow {
@@ -81,7 +86,6 @@ impl Flow {
             tls_buf_down: Vec::new(),
             seen_appdata: false,
             last_pkt_ts: ts,
-            first_payload_entropy: 0.0,
         }
     }
 
@@ -89,19 +93,11 @@ impl Flow {
         self.end_ts = ts;
         self.last_pkt_ts = ts;
 
-        if self.seen_appdata && self.pkts.is_empty() && !payload.is_empty() {
-            let take_len = std::cmp::min(payload.len(), 64);
-            self.first_payload_entropy = shannon_entropy(&payload[..take_len]);
-        }
-
-        if self.seen_appdata && self.pkts.len() < MAX_PKT_SAMPLES {
-            self.pkts.push(PacketRecord {
-                ts,
-                direction,
-                payload_len: payload.len(),
-            });
-        }
-
+        // Parse TLS first so that seen_appdata is set by the packet
+        // that carries the first Application Data record. Previously, the check for
+        // seen_appdata happened before parse_tls(), causing the triggering packet
+        // to be recorded on the *next* call — a systematic off-by-one that meant
+        // every flow had one fewer application-layer packet in pkts[].
         match direction {
             Direction::Up => {
                 self.tls_buf_up.extend_from_slice(payload);
@@ -119,6 +115,15 @@ impl Flow {
                     &mut self.seen_appdata,
                 );
             }
+        }
+
+        // Record the packet — including the one that just triggered seen_appdata.
+        if self.seen_appdata && self.pkts.len() < MAX_PKT_SAMPLES {
+            self.pkts.push(PacketRecord {
+                ts,
+                direction,
+                payload_len: payload.len(),
+            });
         }
     }
 
@@ -182,7 +187,21 @@ impl Flow {
 
         if dport == 9443 || sport == 9443 {
             return Some(0);
-        } else if dport == 8440 || sport == 8440 {
+        }
+
+        // MCP labels (1-6) are only assigned if the flow originates
+        // from within the internal 10.11.0.0/24 subnet. External IPs (GitHub CDN,
+        // Cloudflare, etc.) that reach MCP ports via the proxy have different RTT,
+        // packet sizing, and timing characteristics — labelling them as MCP would
+        // contaminate the training data with out-of-distribution samples.
+        let src_is_internal =
+            (self.key.src_ip & MCP_CLIENT_MASK) == MCP_CLIENT_SUBNET || self.key.src_ip == 0x7F00_0001; // 127.0.0.1
+
+        if !src_is_internal {
+            return None; // Exclude external-origin flows (label 255 in CSV)
+        }
+
+        if dport == 8440 || sport == 8440 {
             return Some(1);
         } else if dport == 8441 || sport == 8441 {
             return Some(2);
@@ -202,23 +221,4 @@ impl Flow {
 
 pub fn is_server_endpoint(_ip: u32, port: u16) -> bool {
     (8440..=8445).contains(&port) || port == 9443
-}
-
-fn shannon_entropy(data: &[u8]) -> f64 {
-    if data.is_empty() {
-        return 0.0;
-    }
-    let mut counts = [0usize; 256];
-    for &b in data {
-        counts[b as usize] += 1;
-    }
-    let mut entropy = 0.0;
-    let len = data.len() as f64;
-    for &c in &counts {
-        if c > 0 {
-            let p = c as f64 / len;
-            entropy -= p * p.log2();
-        }
-    }
-    entropy
 }

@@ -32,7 +32,9 @@ SSL_CTX.verify_mode    = ssl.CERT_NONE
 
 # httpx client factory: reuse across pattern threads.
 def make_client(**kwargs) -> httpx.AsyncClient:
-    return httpx.AsyncClient(verify=False, timeout=60.0, **kwargs)
+    headers = kwargs.pop("headers", {})
+    headers["X-Padding"] = "A" * random.randint(10, 1000)
+    return httpx.AsyncClient(verify=False, timeout=60.0, headers=headers, **kwargs)
 
 # Timing primitives
 

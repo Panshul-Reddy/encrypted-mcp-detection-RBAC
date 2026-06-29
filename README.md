@@ -1,140 +1,93 @@
-# Encrypted MCP Payload Detection: Architecture and Implementation
+# Encrypted MCP Payload Detection & Layer 4 RBAC
 
 ## Overview
 
-Welcome to the unified repository for **Encrypted Model Context Protocol (MCP) Payload Detection**. As machine learning systems and Large Language Model (LLM) integrations become increasingly embedded in modern infrastructure, securing these AI-to-tool communication channels is of paramount importance. 
+Welcome to the unified repository for **Encrypted Model Context Protocol (MCP) Payload Detection and Role-Based Access Control (RBAC)**. As machine learning systems and Large Language Model (LLM) integrations become increasingly embedded in modern infrastructure, securing these AI-to-tool communication channels is of paramount importance. 
 
-This project addresses the critical challenge of classifying and intercepting unauthorized or adversarial MCP traffic in real-time, relying exclusively on encrypted streams without the necessity of TLS decryption. We achieve this through a combination of rigorous data engineering, low-latency feature extraction in Rust, and specialized early-packet sequence models deployed via Python, enabling the system to identify and terminate malicious flows mid-stream.
+This project addresses the critical challenge of classifying, policing, and intercepting unauthorized MCP traffic in real-time. It operates **exclusively on encrypted streams** without the necessity of TLS decryption. We achieve this through a combination of rigorous data engineering, low-latency feature extraction in Rust, and specialized early-packet sequence models deployed via Python, culminating in a dynamic Layer 4 RBAC enforcement engine.
 
 ---
 
 ## Prerequisites
 
 Before running the system, ensure you have the following installed:
-* **Docker & Docker Compose**: Required for running the backend MCP and Noise servers.
+* **Docker Desktop**: Required for running the backend MCP and Noise servers.
 * **Rust & Cargo**: Required to compile the High-Speed Feature Extractor (`rust-extractor`).
 * **Python 3.10+**: Required for the ML Inference API, Proxy, and Traffic Generators.
-* **`uv` (or `pip`)**: Recommended for ultra-fast Python environment resolution.
-* **Root/Sudo Privileges**: Required for `libpcap` to bind to the network interface in promiscuous mode.
+* **Npcap (Windows)**: Required for `libpcap` to bind to the network interface in promiscuous mode (make sure Npcap SDK is installed and added to your `$env:LIB`).
 
 ---
 
-## Tripartite System Architecture
+## System Architecture
 
-To achieve line-rate processing and preserve bidirectional traffic features without introducing latency, we implement a highly decoupled, three-tier architecture:
+To achieve line-rate processing and preserve bidirectional traffic features without introducing latency, we implement a highly decoupled architecture:
 
 ### 1. High-Speed Feature Extractor (Rust Core)
-Located in `capture/` and `rust-extractor/`. 
-The core data acquisition engine is implemented in Rust. It operates in promiscuous mode on the network bridge, performing line-rate packet capture, TCP stream reassembly, and TLS unencrypted header parsing. It extracts a comprehensive feature vector per flow, encompassing:
+Located in `rust-extractor/`. 
+The core data acquisition engine is implemented in Rust. It operates in promiscuous mode, performing line-rate packet capture, TCP stream reassembly, and TLS unencrypted header parsing. It extracts a comprehensive **115-dimension feature vector** per flow, encompassing:
 * **Flow Metadata:** Flow durations, byte and packet counts, and directional ratios.
 * **Timing Statistics:** Inter-Arrival Time (IAT) statistical moments (mean, standard deviation, minimum, maximum).
 * **TLS Parsing:** Application Data lengths inferred from unencrypted 5-byte headers.
-* **Payload Entropy:** Shannon entropy calculations derived from the first 64 bytes of TCP payloads.
 * **N-Packet Sequences:** Fixed-length arrays tracking the size, directionality, and IAT of the initial 20 packets.
 
-*Rationale: Native Python packet processing (e.g., via Scapy) introduces prohibitive latency for line-rate TCP reassembly. Centralizing feature extraction in Rust ensures deterministic, low-latency performance.*
+*(Note: Payload Entropy calculations were removed from the feature set as they were deemed ineffective for differentiating between uniformly encrypted TLS cipher suites).*
 
 ### 2. FastFlow Inference API (Machine Learning Engine)
 Located in `classifier/`.
-This component serves as the asynchronous inference engine. Implemented as a Python API, it serves pre-trained XGBoost sequence models with the following optimizations:
+This component serves as the asynchronous inference engine. Implemented as a Python API, it serves pre-trained tree-ensemble models:
 * **Threshold Buffering:** The Rust core emits feature vectors strictly at predefined packet milestones: N = [3, 5, 8, 10, 15, 20].
-* **Progressive Confidence Evaluation:** The API routes incoming requests to the corresponding N-packet model. If the classification confidence exceeds the requisite threshold (>85%), a terminal classification is returned. If confidence is insufficient, the system returns an `UNKNOWN_WAIT` directive, instructing the Rust core to accumulate further packets before issuing subsequent queries.
+* **Progressive Confidence Evaluation:** The API routes incoming requests to the corresponding N-packet model. The system uses a **Dynamic Confidence Threshold** that scales progressively (e.g., requires 35% confidence at N=3, up to 60% at N=20). If confidence is insufficient, it returns a `WAIT` directive to accumulate more packets.
 
-### 3. Mid-Stream TLS Proxy (Enforcement Node)
-Located in `proxy/`.
-A lightweight inline TLS proxy engineered for **Mid-Stream Termination**. It forwards packets uninterrupted, permitting the Rust core to observe bidirectional traffic characteristics including server responses. Upon receiving a positive identification of anomalous or malicious traffic from the FastFlow API, an out-of-band termination command is issued to the proxy, which instantaneously severs the active TCP connection.
-
----
-
-## Data Engineering and the Unified Docker Environment
-
-Developing a robust, resilient model necessitates a highly diverse and representative dataset. We have architected an orchestrated Docker environment to simulate realistic network conditions and mitigate loopback overfitting.
-
-* **Positive Class (MCP Traffic):** Official MCP servers (Fetch, Memory, Filesystem) are deployed behind an NGINX reverse proxy (`nginx/`, `mcp-servers/`). A programmatic client (`groq-client/`) continuously executes randomized, LLM-driven tool calls to generate realistic temporal traffic bursts.
-* **Negative Class (Noise and Adversarial Traffic):** To introduce authentic Wide Area Network (WAN) latency jitter and Maximum Transmission Unit (MTU) fragmentation, payloads are fetched from public APIs (`noise-client/`, `noise-server/`). Furthermore, adversarial JSON-RPC generators are deployed to emit compliant JSON-RPC 2.0 structures over Server-Sent Events (SSE), intentionally simulating sophisticated evasion techniques.
-* **Deterministic Labeling:** Establishing ground truth for encrypted traffic is historically challenging. This is addressed by isolating respective services on designated ports (e.g., Fetch=8440, Memory=8441). The Rust dataset exporter utilizes these deterministic destinations to accurately label the resulting `dataset.csv`.
+### 3. Layer 4 Encrypted RBAC Engine
+The prediction results are passed through the RBAC engine, which maps source IPs (or in the demo environment, simulated roles based on flow timing) to predefined security roles (`analyst`, `restricted`, `full`). 
+* If a flow attempts to access a tool/server they do not have authorization for, the system issues a **DENY** decision.
+* A terminal command is dispatched to the Proxy on UDP port 9999, which instantaneously triggers a **Mid-Stream Kill**, terminating the TCP socket before the LLM can receive the unauthorized data.
 
 ---
 
 ## Model Training Methodology
 
-The machine learning strategy avoids processing raw packet captures through deep learning networks, which is prone to overfitting. Instead, the approach relies on meticulously engineered features and early-sequence classifiers.
+Because the models require the full 115-dimension feature shapes and are extremely large when saved (`~200MB` each), **they are not checked into version control**. You must generate them locally.
 
-* **Multi-Class Objectives:** Traffic is classified across five distinct categories: `[Noise, MCP-Fetch, MCP-Memory, MCP-Filesystem, MCP-GitHub]`.
-* **Early-Sequence Models:** Distinct XGBoost estimators are trained for truncated packet sequences. For instance, an N=5 model evaluates exclusively the first five packets, whereas an N=10 model evaluates ten. This architecture facilitates split-second classification prior to full payload transmission, preserving bandwidth and proactively neutralizing threats.
-
----
-
-## Operational Guidelines & Live Demo Guide
-
-Due to how Docker handles networking, the setup for live traffic interception differs significantly depending on the host operating system.
-
-### OS-Specific Architecture Requirements
-
-**macOS & Windows (Docker Desktop):**
-Docker runs inside a lightweight Linux virtual machine. Traffic sent between two Docker containers remains within that VM's bridge network and is invisible to host packet sniffers (e.g., Wireshark or `libpcap`). 
-To bypass this limitation, we utilize **Loopback Interception**: The backend servers and `tls-proxy` run inside Docker, while the clients (traffic generators) run natively on the host OS. This routes traffic across the host's loopback interface (`lo0` on macOS), allowing the Rust analyzer to capture it before entering the Docker VM.
-
-**Linux (Native Docker):**
-Docker runs natively on the host kernel. Container-to-container traffic can be sniffed directly by attaching the Rust analyzer to the specific Docker bridge interface (e.g., `br-<network_id>`).
+1. **Dataset Generation:** The `dataset_hard.csv` contains realistic WAN latency jitter, adversarial JSON-RPC payloads, and official MCP server traffic.
+2. **Early-Sequence Models:** The training script compares Random Forest, Extra Trees, and HistGradientBoosting candidates across multiple sequence thresholds (N=3 to N=20). 
+3. **Compilation:** The resulting highly accurate models are saved as `.joblib` files to the `classifier/models/` directory for fast loading by the FastFlow API.
 
 ---
 
-### Phase 1: Environment Setup & Dataset Generation
+## Live Demo Guide (Windows PowerShell)
 
-1. **Start the Backend Infrastructure:**
-   Ensure Python virtual environments are configured, then start the proxy and backend servers.
-   ```bash
-   docker compose up -d tls-proxy mcp-servers noise-server
-   ```
+We provide an automated orchestration script (`start_demo.ps1`) to launch all services, orchestrate traffic, and run the real-time TUI dashboard.
 
-2. **(Optional) Generate the Dataset:**
-   To train models from scratch, execute the dataset generator. *(Note: On macOS/Windows, this script configures clients to run natively over loopback).*
-   ```bash
-   ./generate_dataset.sh
-   ```
+### 1. Train the Models (First Run Only)
+Before running the demo for the first time, you must train the progressive ML models using the provided dataset.
+```powershell
+cd classifier
+.\.venv\Scripts\python.exe train.py
+cd ..
+```
+*This will generate `n3.joblib`, `n5.joblib`, etc. inside `classifier/models/`.*
 
-3. **Train the Models:**
-   Navigate to the `classifier/` directory to train the XGBoost models across all packet thresholds (N=3, 5, 8, 10, etc.).
-   ```bash
-   cd classifier/
-   source .venv/bin/activate
-   pip install -r requirements.txt
-   python train.py --dataset ../dataset.csv
-   ```
-
----
-
-### Phase 2: Live Inference & Mid-Stream Kill Demo
-
-To observe the firewall identifying and terminating unauthorized traffic mid-stream, we provide an automated orchestration script. This script automatically builds the Rust binaries, configures Python environments, and launches all background services (Docker, Inference API, TLS Proxy, and Traffic Generators) before attaching the Rust TUI to the loopback interface.
-
-**Execution:**
+### 2. Execute the Demo
 Execute the orchestration script from the project root:
-```bash
-chmod +x start_demo.sh
-./start_demo.sh
+```powershell
+.\start_demo.ps1
 ```
 
 **What the Script Orchestrates:**
-1. **Docker Infrastructure:** Initializes the backend MCP and Noise servers.
-2. **FastFlow API:** Runs the FastAPI model server on port `5050` (logs to `classifier/api.log`).
-3. **Native TLS Proxy:** Binds natively to the host to circumvent Docker NAT limitations on macOS/Windows, allowing precise source IP tracking (logs to `proxy/proxy.log`).
+1. **Docker Infrastructure:** Initializes the backend MCP (`fetch`, `memory`, `filesystem`, `tavily`, `exa`) and Noise servers.
+2. **FastFlow API:** Runs the FastAPI model server on port `5050`.
+3. **Native TLS Proxy:** Binds natively to loopback to route traffic to the Docker containers.
 4. **Traffic Generators:** 
    - `groq-client` generates legitimate MCP `tools/call` patterns.
-   - `noise-client` generates adversarial traffic (WSS, REST polling) against the proxy endpoints.
-5. **Rust Live Analyzer:** Prompts for superuser privileges to bind `libpcap` to the loopback interface (`lo0`) and renders the real-time TUI dashboard.
+   - `restricted-client` generates unauthorized tool calls to simulate an internal threat.
+   - `noise-client` generates adversarial web traffic to test evasion resilience.
+5. **Rust Live Analyzer:** Compiles and runs the Rust core, attaching to the Npcap loopback adapter to feed the ML API.
+6. **Live RBAC Monitor:** Launches a sleek terminal monitor reading from `logs/encrypted_rbac_audit.jsonl` to display real-time ALLOW/DENY decisions!
 
-**Observation:**
-1. As the script runs, active flows will instantly populate in the Rust TUI.
-2. The ML inference engine will label anomalous flows (from the `noise-client`) as `NOISE`.
-3. The Rust analyzer will transmit a UDP command to the native proxy.
-4. The background proxy instantly severs the socket mid-stream. (You can verify this by running `tail -f proxy/proxy.log` in a separate terminal to view the `[control] Executing Mid-Stream KILL` events).
-5. Exiting the Rust TUI (via `Ctrl+C` or `q`) will trigger a clean shutdown of all background services.
-
-### Why an ML Firewall? (The Reverse Proxy Problem)
-Traditional port-based firewalls easily fall victim to reverse proxy encapsulation. If a standard firewall is positioned behind a TLS-terminating proxy (like Nginx), it sees all traffic arriving on the same local proxy port. 
-
-If an attacker launches a malicious polling script against the proxy's open HTTP port (e.g., `8440`), a traditional firewall evaluates the destination port, concludes that `8440` is authorized, and lets the attack through blindly. 
-
-Our **Machine Learning Firewall** bypasses this entirely. By executing deep packet cadence analysis (inter-arrival times, payload byte entropy, request/response pacing), the AI completely ignores the port number. It dynamically identifies that the underlying application-layer sequence is anomalous and terminates the flow mid-stream—providing zero-trust security even when traffic is fully encapsulated behind an edge proxy!
+### 3. Cleanup
+If processes hang or you need to restart the demo, run:
+```powershell
+taskkill /F /IM live-analyzer.exe /T -ErrorAction SilentlyContinue
+taskkill /F /IM python.exe /T -ErrorAction SilentlyContinue
+```
