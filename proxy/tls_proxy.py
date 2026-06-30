@@ -172,14 +172,15 @@ class PolicyEngine:
         if not self.audit_log_path:
             return
         entry = {
-            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "client_ip": client_ip,
-            "client_port": client_port,
+            "ts": time.time(),
+            "src_ip": client_ip,
+            "src_port": client_port,
+            "dst_ip": "127.0.0.1",
             "dst_port": dst_port,
             "api_key": (api_key[:8] + "...") if api_key and len(api_key) > 8 else (api_key or ""),
             "role": role,
             "method": method,
-            "tool": tool or "",
+            "accessed": tool or "",
             "server": server_name,
             "decision": decision,
             "reason": reason,
@@ -576,6 +577,9 @@ async def handle_client(client_r, client_w, backend_host, backend_port, policy):
         tool_suffix = f"/{tool_name}" if tool_name else ""
         print(f"[policy] ALLOW {client_key} | {server_name} | {rpc_method}{tool_suffix}",
               file=sys.stderr)
+        
+        # Log ALLOW decision to audit log too
+        policy._audit(client_ip, client_port, local_port, api_key, role_name, rpc_method, tool_name, "ACCEPT", "", server_name=server_name)
     else:
         # GET /sse, OPTIONS, etc. — always pass through (inherently read-only)
         print(f"[policy] PASS  {client_key} | {server_name} | {req.method} {req.path}",
@@ -676,7 +680,7 @@ async def main():
     # ── Set up audit logging ──────────────────────────────────────────────
     logs_dir = os.path.join(os.path.dirname(args.policy or "."), "..", "logs")
     logs_dir = os.path.abspath(logs_dir)
-    policy.set_audit_log(os.path.join(logs_dir, "rbac_audit.jsonl"))
+    policy.set_audit_log(os.path.join(logs_dir, "encrypted_rbac_audit.jsonl"))
     policy.set_payload_log(os.path.join(logs_dir, "payload_inspection.jsonl"))
 
     # ── Start UDP control server (KILL protocol for ML firewall) ─────────

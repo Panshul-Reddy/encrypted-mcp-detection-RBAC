@@ -480,7 +480,7 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
             let conf_text = format!("{:.2}", conf);
 
             let mut final_server = flow.server_name.as_deref().unwrap_or("—");
-            let mut final_role = flow.role.as_deref().unwrap_or("—");
+            let mut final_role = flow.role.as_deref().unwrap_or("unknown");
             let mut final_accessed = flow.accessed.as_deref().unwrap_or("—");
             let mut final_decision = flow.decision.as_deref().unwrap_or("—");
 
