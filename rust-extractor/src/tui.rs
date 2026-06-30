@@ -18,6 +18,14 @@ use crate::capture::CaptureStats;
 
 const MAX_DISPLAY_FLOWS: usize = 500;
 
+#[derive(Debug, Clone)]
+pub struct FlowMeta {
+    pub server_name: Option<String>,
+    pub role: Option<String>,
+    pub accessed: Option<String>,
+    pub decision: Option<String>,
+}
+
 
 #[derive(Debug, Clone)]
 pub struct ClassifiedFlow {
@@ -33,6 +41,8 @@ pub struct ClassifiedFlow {
     pub is_closed: bool,
     pub server_name: Option<String>,
     pub role: Option<String>,
+    pub accessed: Option<String>,
+    pub decision: Option<String>,
 }
 
 
@@ -96,6 +106,7 @@ pub struct TuiState {
 
     pub flows: VecDeque<ClassifiedFlow>,
     pub active_predictions: HashMap<String, (u8, Option<u8>)>,
+    pub meta_map: HashMap<String, FlowMeta>,
 
     pub latency_samples: VecDeque<Duration>,
 
@@ -124,6 +135,7 @@ impl TuiState {
         Self {
             flows: VecDeque::new(),
             active_predictions: HashMap::new(),
+            meta_map: HashMap::new(),
             latency_samples: VecDeque::with_capacity(1000),
             total_mcp: 0,
             total_noise: 0,
@@ -408,7 +420,11 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
         SortMode::Recent => {}
 
         SortMode::Confidence => {
-            sorted.sort_by(|a, b| b.proba_mcp.partial_cmp(&a.proba_mcp).unwrap());
+            sorted.sort_by(|a, b| {
+                let max_a = a.proba_mcp.max(a.proba_noise);
+                let max_b = b.proba_mcp.max(b.proba_noise);
+                max_b.partial_cmp(&max_a).unwrap()
+            });
         }
         SortMode::Duration => {
             sorted.sort_by(|a, b| b.duration_s.partial_cmp(&a.duration_s).unwrap());
@@ -421,13 +437,14 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
     let header = Row::new(vec![
         Cell::from("Flow").style(Style::default().fg(Color::White).bold()),
         Cell::from("Class").style(Style::default().fg(Color::White).bold()),
-        Cell::from("P(MCP)").style(Style::default().fg(Color::White).bold()),
+        Cell::from("Conf").style(Style::default().fg(Color::White).bold()),
         Cell::from("Pkts").style(Style::default().fg(Color::White).bold()),
-        Cell::from("Duration").style(Style::default().fg(Color::White).bold()),
+        Cell::from("Dur").style(Style::default().fg(Color::White).bold()),
         Cell::from("GT").style(Style::default().fg(Color::White).bold()),
         Cell::from("Server").style(Style::default().fg(Color::White).bold()),
         Cell::from("Role").style(Style::default().fg(Color::White).bold()),
-        Cell::from("Latency").style(Style::default().fg(Color::White).bold()),
+        Cell::from("Access").style(Style::default().fg(Color::White).bold()),
+        Cell::from("Decision").style(Style::default().fg(Color::White).bold()),
     ]);
 
     let rows: Vec<Row> = sorted
@@ -459,36 +476,53 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
             };
 
             let dur_text = format!("{:.1}s", flow.duration_s);
-            let p_mcp_text = format!("{:.2}", flow.proba_mcp);
-            
-            let server_text = flow.server_name.as_deref().unwrap_or("—").to_string();
-            let role_text = flow.role.as_deref().unwrap_or("—").to_string();
-            let latency_str = format!("{:.1}ms", flow.inference_latency.as_secs_f64() * 1000.0);
+            let conf = flow.proba_mcp.max(flow.proba_noise);
+            let conf_text = format!("{:.2}", conf);
+
+            let mut final_server = flow.server_name.as_deref().unwrap_or("—");
+            let mut final_role = flow.role.as_deref().unwrap_or("—");
+            let mut final_accessed = flow.accessed.as_deref().unwrap_or("—");
+            let mut final_decision = flow.decision.as_deref().unwrap_or("—");
+
+            if let Some(meta) = state.meta_map.get(&flow.flow_display) {
+                if let Some(s) = meta.server_name.as_deref() { final_server = s; }
+                if let Some(r) = meta.role.as_deref() { final_role = r; }
+                if let Some(a) = meta.accessed.as_deref() { final_accessed = a; }
+                if let Some(d) = meta.decision.as_deref() { final_decision = d; }
+            }
+
+            let decision_style = match final_decision {
+                "ALLOW" => Style::default().fg(Color::Green),
+                "DENY" => Style::default().fg(Color::Red),
+                _ => Style::default().fg(Color::DarkGray),
+            };
 
             Row::new(vec![
                 Cell::from(flow.flow_display.clone()),
                 Cell::from(class_text).style(class_style),
-                Cell::from(p_mcp_text).style(proba_style),
+                Cell::from(conf_text).style(proba_style),
                 Cell::from(flow.pkt_count.to_string()),
                 Cell::from(dur_text),
                 Cell::from(gt_text).style(gt_style),
-                Cell::from(server_text),
-                Cell::from(role_text),
-                Cell::from(latency_str),
+                Cell::from(final_server),
+                Cell::from(final_role),
+                Cell::from(final_accessed),
+                Cell::from(final_decision).style(decision_style),
             ])
         })
         .collect();
 
     let widths = [
-        Constraint::Length(45), // Flow
+        Constraint::Min(28),    // Flow
         Constraint::Length(7),  // Class
-        Constraint::Length(7),  // P(MCP)
+        Constraint::Length(6),  // Conf
         Constraint::Length(5),  // Pkts
-        Constraint::Length(10), // Duration
-        Constraint::Length(5),  // GT
-        Constraint::Length(12), // Server
-        Constraint::Length(10), // Role
-        Constraint::Length(10), // Latency
+        Constraint::Length(6),  // Dur
+        Constraint::Length(4),  // GT
+        Constraint::Length(10), // Server
+        Constraint::Length(9),  // Role
+        Constraint::Length(14), // Access
+        Constraint::Length(9),  // Decision
     ];
 
     let table = Table::new(
