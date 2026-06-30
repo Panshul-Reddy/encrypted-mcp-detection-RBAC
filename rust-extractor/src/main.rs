@@ -51,7 +51,7 @@ struct Args {
     replay: Option<Vec<PathBuf>>,
 
     /// BPF filter expression.
-    #[arg(short, long, default_value = "tcp port 8440 or tcp port 8441 or tcp port 8442 or tcp port 8443 or tcp port 8444 or tcp port 8445 or tcp port 9443")]
+    #[arg(short, long, default_value = "tcp port 8440 or tcp port 8441 or tcp port 8442 or tcp port 8443 or tcp port 8444 or tcp port 8445 or tcp port 8446 or tcp port 9444")]
     bpf_filter: String,
 
     /// Inference sidecar URL.
@@ -383,11 +383,16 @@ async fn run_classification_pipeline(
         let src_ip_str = std::net::Ipv4Addr::from(flow.key.src_ip).to_string();
         let dst_ip_str = std::net::Ipv4Addr::from(flow.key.dst_ip).to_string();
 
-        match client.predict(&features, &src_ip_str, flow.key.src_port, &dst_ip_str, flow.key.dst_port).await {
+        let gt_str = flow.ground_truth_label().map(|l| match l {
+            0 => "NOISE".to_string(),
+            _ => "MCP".to_string(),
+        });
+
+        match client.predict(&features, &src_ip_str, flow.key.src_port, &dst_ip_str, flow.key.dst_port, gt_str).await {
             Ok((prediction, latency)) => {
                 let classified = ClassifiedFlow {
                     flow_display: flow.key.display(),
-                    label: prediction.label,
+                    label: prediction.label as u8,
                     proba_mcp: prediction.proba[1],
                     proba_noise: prediction.proba[0],
                     pkt_count: flow.pkt_count(),
@@ -396,6 +401,8 @@ async fn run_classification_pipeline(
                     inference_latency: latency,
                     classified_at: Instant::now(),
                     is_closed: !matches!(finalized.reason, reaper::FinalizationReason::EarlyEvaluation),
+                    server_name: prediction.server_name.clone(),
+                    role: prediction.role.clone(),
                 };
 
                 // Merge: Trigger Mid-Stream Kill if RBAC issues a DENY

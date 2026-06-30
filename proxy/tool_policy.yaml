@@ -1,25 +1,24 @@
 roles:
   full:
-    allowed_methods: "*"
+    rate_limit: 600
     allowed_tools: "*"
-    rate_limit: 1000
+
   analyst:
-    allowed_methods: ["tools/call", "prompts/list"]
-    allowed_tools: ["fetch", "filesystem", "exa", "tavily"]
+    rate_limit: 100
+    allowed_tools:
+      - "fetch"
+      - "exa"
+      - "tavily"
+      - "memory"
+
   readonly:
-    allowed_methods: ["tools/call"]
-    allowed_tools: ["fetch", "exa", "tavily"]
-  deny_all:
-    allowed_methods: []
-    allowed_tools: []
+    rate_limit: 30
+    allowed_tools:
+      - "fetch"
 
 clients:
   by_ip:
-    "10.11.0.30": "full"          # groq-client (full access)
-    "10.11.0.31": "analyst"       # restricted demo client
-    "127.0.0.1":  "full"          # localhost dev/testing
-  by_api_key:
-    "full-access-key-001": "full"
-    "analyst-key-001":     "analyst"
-    "readonly-key-001":    "readonly"
+    "10.11.0.30": "full"
+    "10.11.0.31": "analyst"
+    "127.0.0.1":  "full"
   default_role: "readonly"

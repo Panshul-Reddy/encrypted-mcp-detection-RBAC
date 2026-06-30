@@ -15,6 +15,7 @@ import os
 import random
 import ssl
 import time
+import argparse
 
 import httpx
 from httpx_sse import aconnect_sse
@@ -22,7 +23,15 @@ import websockets
 
 # Configuration
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--proxy-port", type=int, default=None)
+args, unknown = parser.parse_known_args()
+
 NOISE_SERVER = os.environ.get("NOISE_SERVER", "https://10.10.0.20:9443")
+if args.proxy_port:
+    # Use the proxy for the JSON-RPC hard negative test
+    NOISE_SERVER = f"https://127.0.0.1:{args.proxy_port}"
+    
 WS_SERVER    = NOISE_SERVER.replace("https://", "wss://")
 
 # SSL context: disable verification for the self-signed lab certificate.

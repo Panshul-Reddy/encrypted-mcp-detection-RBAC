@@ -33,6 +33,7 @@ struct PredictRequest {
     src_port: u16,
     dst_ip: String,
     dst_port: u16,
+    ground_truth: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -43,9 +44,11 @@ struct PredictBatchRequest {
 /// Single classification response.
 #[derive(Debug, Clone, Deserialize)]
 pub struct PredictResponse {
-    pub label: u8,
+    pub label: i16,
     pub proba: [f64; 2],
     pub rbac_decision: Option<String>,
+    pub server_name: Option<String>,
+    pub role: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -91,6 +94,7 @@ impl InferenceClient {
         src_port: u16,
         dst_ip: &str,
         dst_port: u16,
+        ground_truth: Option<String>,
     ) -> Result<(PredictResponse, Duration)> {
         let url = format!("{}/predict", self.config.base_url);
         let body = PredictRequest {
@@ -99,6 +103,7 @@ impl InferenceClient {
             src_port,
             dst_ip: dst_ip.to_string(),
             dst_port,
+            ground_truth,
         };
 
         let start = Instant::now();
@@ -135,18 +140,19 @@ impl InferenceClient {
     /// Classify a batch of feature vectors.
     pub async fn predict_batch(
         &self,
-        batch: &[(&[f64; 115], &str, u16, &str, u16)],
+        batch: &[(&[f64; 115], &str, u16, &str, u16, Option<String>)],
     ) -> Result<(Vec<PredictResponse>, Duration)> {
         let url = format!("{}/predict_batch", self.config.base_url);
         let body = PredictBatchRequest {
             batch: batch
                 .iter()
-                .map(|(f, src_ip, src_port, dst_ip, dst_port)| PredictRequest {
+                .map(|(f, src_ip, src_port, dst_ip, dst_port, ground_truth)| PredictRequest {
                     features: f.to_vec(),
                     source_ip: src_ip.to_string(),
                     src_port: *src_port,
                     dst_ip: dst_ip.to_string(),
                     dst_port: *dst_port,
+                    ground_truth: ground_truth.clone(),
                 })
                 .collect(),
         };

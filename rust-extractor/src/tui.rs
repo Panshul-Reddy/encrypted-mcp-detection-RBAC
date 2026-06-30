@@ -31,6 +31,8 @@ pub struct ClassifiedFlow {
     pub inference_latency: Duration,
     pub classified_at: Instant,
     pub is_closed: bool,
+    pub server_name: Option<String>,
+    pub role: Option<String>,
 }
 
 
@@ -423,7 +425,8 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
         Cell::from("Pkts").style(Style::default().fg(Color::White).bold()),
         Cell::from("Duration").style(Style::default().fg(Color::White).bold()),
         Cell::from("GT").style(Style::default().fg(Color::White).bold()),
-        
+        Cell::from("Server").style(Style::default().fg(Color::White).bold()),
+        Cell::from("Role").style(Style::default().fg(Color::White).bold()),
         Cell::from("Latency").style(Style::default().fg(Color::White).bold()),
     ]);
 
@@ -455,29 +458,42 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
                 None => Style::default().fg(Color::DarkGray),
             };
 
+            let dur_text = format!("{:.1}s", flow.duration_s);
+            let p_mcp_text = format!("{:.2}", flow.proba_mcp);
+            
+            let server_text = flow.server_name.as_deref().unwrap_or("—").to_string();
+            let role_text = flow.role.as_deref().unwrap_or("—").to_string();
+            let latency_str = format!("{:.1}ms", flow.inference_latency.as_secs_f64() * 1000.0);
+
             Row::new(vec![
                 Cell::from(flow.flow_display.clone()),
                 Cell::from(class_text).style(class_style),
-                Cell::from(format!("{:.3}", flow.proba_mcp)).style(proba_style),
-                Cell::from(format!("{}", flow.pkt_count)),
-                Cell::from(format!("{:.1}s", flow.duration_s)),
+                Cell::from(p_mcp_text).style(proba_style),
+                Cell::from(flow.pkt_count.to_string()),
+                Cell::from(dur_text),
                 Cell::from(gt_text).style(gt_style),
-                Cell::from(format!("{:.1}ms", flow.inference_latency.as_secs_f64() * 1000.0)),
+                Cell::from(server_text),
+                Cell::from(role_text),
+                Cell::from(latency_str),
             ])
         })
         .collect();
 
+    let widths = [
+        Constraint::Length(45), // Flow
+        Constraint::Length(7),  // Class
+        Constraint::Length(7),  // P(MCP)
+        Constraint::Length(5),  // Pkts
+        Constraint::Length(10), // Duration
+        Constraint::Length(5),  // GT
+        Constraint::Length(12), // Server
+        Constraint::Length(10), // Role
+        Constraint::Length(10), // Latency
+    ];
+
     let table = Table::new(
         rows,
-        [
-            Constraint::Min(28),
-            Constraint::Length(7),
-            Constraint::Length(8),
-            Constraint::Length(6),
-            Constraint::Length(10),
-            Constraint::Length(5),
-            Constraint::Length(9),
-        ],
+        widths,
     )
     .header(header)
     .block(

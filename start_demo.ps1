@@ -61,6 +61,12 @@ foreach ($p in $portsToClean) {
 Get-NetUDPEndpoint -LocalPort 9999 -ErrorAction SilentlyContinue |
     Select-Object OwningProcess -Unique |
     ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
+
+# Kill any dangling Rust analyzers from previous background runs
+try {
+    taskkill /F /IM live-analyzer.exe 2>$null
+} catch {}
+
 Start-Sleep -Seconds 1
 
 # Check Docker — temporarily relax error handling since docker info writes to stderr
@@ -137,7 +143,7 @@ Start-Sleep -Seconds 3
 Log-Info "Starting Native TLS Proxy (ports 8440-8445)..."
 $proxyVenv = Join-Path $ProjectRoot "proxy\.venv\Scripts"
 $proxyLog = Join-Path $logDir "proxy.log"
-$proxyArgs = "tls_proxy.py --cert `"$(Join-Path $ProjectRoot 'nginx\ssl\mcp.crt')`" --key `"$(Join-Path $ProjectRoot 'nginx\ssl\mcp.key')`" --mappings 8440:3000,8441:3001,8442:3002,8443:3003,8444:3004,8445:3005 --backend-host 127.0.0.1"
+$proxyArgs = "tls_proxy.py --cert `"$(Join-Path $ProjectRoot 'nginx\ssl\mcp.crt')`" --key `"$(Join-Path $ProjectRoot 'nginx\ssl\mcp.key')`" --mappings 8440:3000,8441:3001,8442:3002,8443:3003,8444:3004,8445:3005,8446:9444 --backend-host 127.0.0.1"
 $proc = Start-Process -FilePath (Join-Path $proxyVenv "python.exe") `
     -ArgumentList $proxyArgs.Split(" ") `
     -WorkingDirectory (Join-Path $ProjectRoot "proxy") `
@@ -156,7 +162,7 @@ $env:MCP_API_KEY = "full-access-key-001"
 $groqVenv = Join-Path $ProjectRoot "groq-client\.venv\Scripts"
 $groqLog = Join-Path $logDir "groq.log"
 $proc = Start-Process -FilePath (Join-Path $groqVenv "python.exe") `
-    -ArgumentList "groq_mcp_client.py" `
+    -ArgumentList "groq_mcp_client.py", "--proxy-port", "8440" `
     -WorkingDirectory (Join-Path $ProjectRoot "groq-client") `
     -RedirectStandardOutput $groqLog `
     -RedirectStandardError (Join-Path $logDir "groq_err.log") `
@@ -170,7 +176,7 @@ $env:NOISE_SERVER = "https://127.0.0.1:9443"
 $noiseVenv = Join-Path $ProjectRoot "noise-client\.venv\Scripts"
 $noiseLog = Join-Path $logDir "noise.log"
 $proc = Start-Process -FilePath (Join-Path $noiseVenv "python.exe") `
-    -ArgumentList "client.py" `
+    -ArgumentList "client.py", "--proxy-port", "8446" `
     -WorkingDirectory (Join-Path $ProjectRoot "noise-client") `
     -RedirectStandardOutput $noiseLog `
     -RedirectStandardError (Join-Path $logDir "noise_err.log") `
@@ -185,7 +191,7 @@ $env:ROLE_LABEL = "analyst"
 $env:LOOP_COUNT = "5"
 $restrictedLog = Join-Path $logDir "restricted_client.log"
 $proc = Start-Process -FilePath (Join-Path $groqVenv "python.exe") `
-    -ArgumentList "restricted_mcp_client.py" `
+    -ArgumentList "restricted_mcp_client.py", "--proxy-port", "8441" `
     -WorkingDirectory (Join-Path $ProjectRoot "groq-client") `
     -RedirectStandardOutput $restrictedLog `
     -RedirectStandardError (Join-Path $logDir "restricted_err.log") `
@@ -213,17 +219,13 @@ if (Test-Path $npcapDefault) {
 }
 
 if ($hasNpcap) {
-    Log-Info "Npcap detected. Launching native Rust packet capture in background..."
-    $tuiStartTime = Get-Date
-    $rustProc = Start-Process -FilePath $rustBinary `
-        -ArgumentList "--interface", "\Device\NPF_Loopback", "--inference-url", "http://localhost:5050" `
-        -WorkingDirectory $ProjectRoot `
-        -PassThru -WindowStyle Hidden
+    Log-Info "Npcap detected. Launching native Rust packet capture in FOREGROUND..."
+    Write-Host "Services are running. Close the Rust TUI (press 'q') to stop all services.`n" -ForegroundColor Yellow
     
-    $script:bgJobs += $rustProc.Id
-    Start-Sleep -Seconds 2
-
-    if ($rustProc.HasExited) {
+    # Run the Rust TUI natively in the foreground terminal
+    try {
+        & $rustBinary --interface "\Device\NPF_Loopback" --inference-url "http://localhost:5050"
+    } catch {
         Log-Warn "Rust packet capture failed (possibly not running as Admin). Falling back to Simulator..."
         $hasNpcap = $false
     }
@@ -236,19 +238,12 @@ if (-not $hasNpcap) {
         -WorkingDirectory $ProjectRoot `
         -PassThru -WindowStyle Hidden
     $script:bgJobs += $simProc.Id
+    
+    Write-Host "Simulator is running. Press Ctrl+C to stop all services.`n" -ForegroundColor Yellow
+    try {
+        Wait-Event   # keep the main ps1 alive
+    } catch {}
 }
-
-Write-Host "`n--- Live Encrypted RBAC Monitor ---" -ForegroundColor Cyan
-Write-Host "Services are running. Waiting for traffic..." -ForegroundColor Gray
-Write-Host "Press Ctrl+C to stop all services.`n" -ForegroundColor Yellow
-
-# Run the Live RBAC Monitor in the foreground
-try {
-    $monitorProc = Start-Process -FilePath "python.exe" `
-        -ArgumentList "live_rbac_monitor.py" `
-        -WorkingDirectory $ProjectRoot `
-        -NoNewWindow -Wait
-} catch {}
 
 # Cleanup all services
 Cleanup

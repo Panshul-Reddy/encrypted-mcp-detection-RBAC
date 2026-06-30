@@ -25,6 +25,22 @@ import random
 import os
 import math
 import json
+import argparse
+import socket
+
+# Monkey patch socket to bind to a specific source port range (55000-59999 for full role)
+_orig_socket = socket.socket
+class BoundSocket(_orig_socket):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.family == socket.AF_INET and self.type == socket.SOCK_STREAM:
+            for _ in range(20):
+                try:
+                    self.bind(('127.0.0.1', random.randint(55000, 59999)))
+                    break
+                except OSError:
+                    pass
+socket.socket = BoundSocket
 
 def lognormal(mu: float, sigma: float, floor: float = 0.0) -> float:
     return max(floor, random.lognormvariate(math.log(max(mu, 0.01)), sigma))
@@ -65,6 +81,12 @@ SERVERS = {
     "exa":        f"https://{VM1_IP}:8444",
     "tavily":     f"https://{VM1_IP}:8445",
 }
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--proxy-port", type=int, default=None)
+args, unknown = parser.parse_known_args()
+if args.proxy_port:
+    SERVERS = {k: f"https://{VM1_IP}:{args.proxy_port}" for k in SERVERS}
 
 # MCP API key for RBAC authentication (sent as X-MCP-API-Key header)
 MCP_API_KEY = os.environ.get("MCP_API_KEY", "full-access-key-001")

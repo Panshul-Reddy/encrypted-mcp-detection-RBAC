@@ -27,15 +27,19 @@ THRESHOLDS = [3, 5, 8, 10, 15, 20]
 models = {}
 flow_log = deque(maxlen=200)
 
-def get_ground_truth(dst_port: int) -> str:
-    # 8765 is the noise-server port in this project architecture, wait. 
-    # Ah! The user prompt says "Ground truth is derived from destination port: port 8765 = MCP, everything else = normal."
-    # Wait, the prompt says "port 8765 = MCP". If so, let's use that.
-    return "MCP" if dst_port in {8440, 8441, 8442, 8443, 8444, 8445} else "normal"
+def infer_ground_truth(dst_port: int, dst_ip: str = "") -> str:
+    noise_ports = {9444}
+    mcp_backend_ports = {3000, 3001, 3002, 3003, 3004, 3005}
+
+    if dst_port in noise_ports:
+        return "NOISE"
+    if dst_port in mcp_backend_ports:
+        return "MCP"
+    return "UNKNOWN"
 
 def log_classification(src_ip, src_port, dst_ip, dst_port,
-                       prediction_label, rbac_decision, confidence, model_used, packet_count, feats):
-    gt = get_ground_truth(dst_port)
+                       prediction_label, rbac_decision, confidence, model_used, packet_count, feats, provided_gt=None):
+    gt = provided_gt if provided_gt else infer_ground_truth(dst_port)
     
     # Normalize prediction for UI
     if rbac_decision == "WAIT":
@@ -145,9 +149,19 @@ def _apply_fallback_policy():
     }
     DEFAULT_ROLE = "readonly"
 
+DST_PORT_ROLES = {
+    8440: "full",
+    8441: "analyst",
+    8442: "analyst",
+    8443: "readonly",
+    8444: "readonly",
+    8445: "readonly",
+    8446: "noise",
+}
+
 load_policy()
 
-def _log_rbac_decision(source_ip, role, server, confidence, decision, reason, action):
+def _log_rbac_decision(source_ip, role, server, confidence, decision, reason, action, **kwargs):
     os.makedirs(os.path.dirname(RBAC_LOG_PATH) or ".", exist_ok=True)
     entry = {
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -159,6 +173,7 @@ def _log_rbac_decision(source_ip, role, server, confidence, decision, reason, ac
         "reason": reason,
         "action": action,
     }
+    entry.update(kwargs)
     try:
         with open(RBAC_LOG_PATH, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry, separators=(",", ":")) + "\n")
@@ -194,11 +209,14 @@ def select_target_model(total_pkts: int):
 
 def resolve_role(source_ip: str, src_port: int, feat: list[float]) -> str:
     """
-    Resolve source IP to a role using the policy file's IP map.
-    For demo purposes, known Docker subnet IPs map to specific roles.
-    The old port-modulo hack (src_port % 3) has been removed — it produced
-    random role assignments since ephemeral ports are OS-assigned.
+    On localhost (127.0.0.1), all clients share the same IP.
+    We distinguish them by their SOURCE port ranges instead of Destination port.
     """
+    if source_ip == "127.0.0.1":
+        if 55000 <= src_port <= 59999: return "full"
+        if 45000 <= src_port <= 49999: return "analyst"
+        # Everything else (like default dynamic ports) is readonly
+        return "readonly"
     return IP_ROLES.get(source_ip, DEFAULT_ROLE)
 
 def required_confidence(target_n):
@@ -258,6 +276,7 @@ class PredictRequest(BaseModel):
     src_port: Optional[int] = 0
     dst_ip: Optional[str] = None
     dst_port: Optional[int] = 0
+    ground_truth: Optional[str] = None
 
 class PredictBatchRequest(BaseModel):
     batch: list[PredictRequest]
@@ -281,18 +300,22 @@ def predict(req: PredictRequest):
             
     # ── Encrypted RBAC Decision ──
     source_ip = req.source_ip or ""
-    src_port = req.src_port or 0
-    role = resolve_role(source_ip, src_port, feat)
+    dst_port = req.dst_port or 0
+    role = resolve_role(source_ip, dst_port, feat)
             
     if target_n is None:
-        _log_rbac_decision(source_ip, role, "unknown", 0.0, "WAIT", "Waiting for more packets", "CLASSIFIED")
+        total_bytes = int(sum(feat[15:35]))
+        _log_rbac_decision(source_ip, role, "unknown", 0.0, "WAIT", "Waiting for more packets", "CLASSIFIED",
+                           packet_count=total_pkts, total_bytes=total_bytes, ground_truth=req.ground_truth if req.ground_truth else infer_ground_truth(dst_port), model="None", dst_port=dst_port)
         log_classification(req.source_ip or "?", req.src_port or 0, req.dst_ip or "?", req.dst_port or 0,
-                           "unknown", "WAIT", 0.0, "None", total_pkts, feat)
+                           "unknown", "WAIT", 0.0, "None", total_pkts, feat, provided_gt=req.ground_truth)
         return {
             "label": -1, 
             "proba": [0.0, 0.0],
             "rbac_decision": "WAIT",
-            "rbac_reason": "Waiting for more packets"
+            "rbac_reason": "Waiting for more packets",
+            "server_name": "unknown",
+            "role": role
         }
             
     model = models[target_n]
@@ -327,14 +350,18 @@ def predict(req: PredictRequest):
         # Progressive Confidence Thresholding for MCP
         min_conf = required_confidence(target_n)
         if target_n != "full" and confidence < min_conf:
-            _log_rbac_decision(source_ip, role, server_name, confidence, "WAIT", f"Confidence {confidence*100:.1f}% below threshold, waiting for more packets", "CLASSIFIED")
+            total_bytes = int(sum(feat[15:35]))
+            _log_rbac_decision(source_ip, role, server_name, confidence, "WAIT", f"Confidence {confidence*100:.1f}% below threshold, waiting for more packets", "CLASSIFIED",
+                               packet_count=total_pkts, total_bytes=total_bytes, ground_truth=req.ground_truth if req.ground_truth else infer_ground_truth(dst_port), model=target_n, dst_port=dst_port)
             log_classification(req.source_ip or "?", req.src_port or 0, req.dst_ip or "?", req.dst_port or 0,
-                               server_name, "WAIT", confidence, target_n, total_pkts, feat)
+                               server_name, "WAIT", confidence, target_n, total_pkts, feat, provided_gt=req.ground_truth)
             return {
                 "label": -1,
                 "proba": [noise_prob, mcp_prob],
                 "rbac_decision": "WAIT",
-                "rbac_reason": f"Confidence {confidence*100:.1f}% below threshold, waiting for more packets"
+                "rbac_reason": f"Confidence {confidence*100:.1f}% below threshold, waiting for more packets",
+                "server_name": server_name,
+                "role": role
             }
 
         # Base RBAC logic
@@ -346,15 +373,19 @@ def predict(req: PredictRequest):
             rbac_decision = "DENY"
             rbac_reason = f"Role '{role}' is NOT allowed to access server '{server_name}' (allowed: {', '.join(allowed_servers)})"
 
-    _log_rbac_decision(source_ip, role, server_name, confidence, rbac_decision, rbac_reason, "CLASSIFIED")
+    total_bytes = int(sum(feat[15:35]))
+    _log_rbac_decision(source_ip, role, server_name, confidence, rbac_decision, rbac_reason, "CLASSIFIED",
+                       packet_count=total_pkts, total_bytes=total_bytes, ground_truth=req.ground_truth if req.ground_truth else infer_ground_truth(dst_port), model=target_n, dst_port=dst_port)
     log_classification(req.source_ip or "?", req.src_port or 0, req.dst_ip or "?", req.dst_port or 0,
-                       server_name, rbac_decision, confidence, target_n, total_pkts, feat)
+                       server_name, rbac_decision, confidence, target_n, total_pkts, feat, provided_gt=req.ground_truth)
 
     return {
         "label": label,
         "proba": [noise_prob, mcp_prob],
         "rbac_decision": rbac_decision,
-        "rbac_reason": rbac_reason
+        "rbac_reason": rbac_reason,
+        "server_name": server_name,
+        "role": role
     }
 
 @app.post("/predict_batch")
@@ -373,16 +404,20 @@ def predict_batch(req: PredictBatchRequest):
                 
         if target_n is None:
             source_ip = item.source_ip or ""
-            src_port = item.src_port or 0
-            role = resolve_role(source_ip, src_port, feat)
-            _log_rbac_decision(source_ip, role, "unknown", 0.0, "WAIT", "Waiting for more packets", "CLASSIFIED")
+            dst_port = item.dst_port or 0
+            role = resolve_role(source_ip, dst_port, feat)
+            total_bytes = int(sum(feat[15:35]))
+            _log_rbac_decision(source_ip, role, "unknown", 0.0, "WAIT", "Waiting for more packets", "CLASSIFIED",
+                               packet_count=total_pkts, total_bytes=total_bytes, ground_truth=item.ground_truth if item.ground_truth else infer_ground_truth(dst_port), model="None", dst_port=dst_port)
             log_classification(item.source_ip or "?", item.src_port or 0, item.dst_ip or "?", item.dst_port or 0,
-                               "unknown", "WAIT", 0.0, "None", total_pkts, feat)
+                               "unknown", "WAIT", 0.0, "None", total_pkts, feat, provided_gt=item.ground_truth)
             predictions[idx] = {
                 "label": -1, 
                 "proba": [0.0, 0.0],
                 "rbac_decision": "WAIT",
-                "rbac_reason": "Waiting for more packets"
+                "rbac_reason": "Waiting for more packets",
+                "server_name": "unknown",
+                "role": role
             }
             continue
             
@@ -421,8 +456,8 @@ def predict_batch(req: PredictBatchRequest):
                 if not ip:
                     ip = "127.0.0.1"
                 
-                src_port = orig_req.src_port or 0
-                role = resolve_role(ip, src_port, feat)
+                dst_port = orig_req.dst_port or 0
+                role = resolve_role(ip, dst_port, feat)
                 total_pkts = int(feat[1])
                 
                 if server_name == "noise":
@@ -432,14 +467,18 @@ def predict_batch(req: PredictBatchRequest):
                     # Progressive Confidence Thresholding for MCP
                     min_conf = required_confidence(target_n)
                     if target_n != "full" and confidence < min_conf:
-                        _log_rbac_decision(ip, role, server_name, confidence, "WAIT", f"Confidence {confidence*100:.1f}% below threshold", "CLASSIFIED")
+                        total_bytes = int(sum(feat[15:35]))
+                        _log_rbac_decision(ip, role, server_name, confidence, "WAIT", f"Confidence {confidence*100:.1f}% below threshold", "CLASSIFIED",
+                                           packet_count=total_pkts, total_bytes=total_bytes, ground_truth=orig_req.ground_truth if orig_req.ground_truth else infer_ground_truth(dst_port), model=target_n, dst_port=dst_port)
                         log_classification(orig_req.source_ip or "?", orig_req.src_port or 0, orig_req.dst_ip or "?", orig_req.dst_port or 0,
-                                           server_name, "WAIT", confidence, target_n, total_pkts, feat)
+                                           server_name, "WAIT", confidence, target_n, total_pkts, feat, provided_gt=orig_req.ground_truth)
                         predictions[i] = {
                             "label": -1,
                             "proba": [noise_prob, mcp_prob],
                             "rbac_decision": "WAIT",
-                            "rbac_reason": f"Confidence {confidence*100:.1f}% below threshold"
+                            "rbac_reason": f"Confidence {confidence*100:.1f}% below threshold",
+                            "server_name": server_name,
+                            "role": role
                         }
                         continue
 
@@ -452,15 +491,19 @@ def predict_batch(req: PredictBatchRequest):
                         rbac_decision = "DENY"
                         rbac_reason = f"Role '{role}' denied"
 
-                _log_rbac_decision(ip, role, server_name, confidence, rbac_decision, rbac_reason, "CLASSIFIED")
+                total_bytes = int(sum(feat[15:35]))
+                _log_rbac_decision(ip, role, server_name, confidence, rbac_decision, rbac_reason, "CLASSIFIED",
+                                   packet_count=total_pkts, total_bytes=total_bytes, ground_truth=orig_req.ground_truth if orig_req.ground_truth else infer_ground_truth(dst_port), model=target_n, dst_port=dst_port)
                 log_classification(orig_req.source_ip or "?", orig_req.src_port or 0, orig_req.dst_ip or "?", orig_req.dst_port or 0,
-                                   server_name, rbac_decision, confidence, target_n, total_pkts, feat)
+                                   server_name, rbac_decision, confidence, target_n, total_pkts, feat, provided_gt=orig_req.ground_truth)
                     
                 predictions[i] = {
                     "label": int(label),
                     "proba": [noise_prob, mcp_prob],
                     "rbac_decision": rbac_decision,
-                    "rbac_reason": rbac_reason
+                    "rbac_reason": rbac_reason,
+                    "server_name": server_name,
+                    "role": role
                 }
             except Exception as e:
                 predictions[i] = {

@@ -185,7 +185,7 @@ impl Flow {
         // 8445: tavily (6)
         // 9443: noise (0)
 
-        if dport == 9443 || sport == 9443 {
+        if dport == 9443 || sport == 9443 || dport == 8446 || sport == 8446 {
             return Some(0);
         }
 

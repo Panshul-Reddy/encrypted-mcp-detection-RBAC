@@ -19,6 +19,23 @@ import os
 import random
 import sys
 import time
+import time
+import argparse
+import socket
+
+# Monkey patch socket to bind to a specific source port range (45000-49999 for analyst role)
+_orig_socket = socket.socket
+class BoundSocket(_orig_socket):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.family == socket.AF_INET and self.type == socket.SOCK_STREAM:
+            for _ in range(20):
+                try:
+                    self.bind(('127.0.0.1', random.randint(45000, 49999)))
+                    break
+                except OSError:
+                    pass
+socket.socket = BoundSocket
 
 import requests
 import urllib3
@@ -43,6 +60,12 @@ SERVERS = {
     "exa":        f"https://{VM1_IP}:8444",
     "tavily":     f"https://{VM1_IP}:8445",
 }
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--proxy-port", type=int, default=None)
+args, unknown = parser.parse_known_args()
+if args.proxy_port:
+    SERVERS = {k: f"https://{VM1_IP}:{args.proxy_port}" for k in SERVERS}
 
 # ANSI
 G = "\033[92m"; R = "\033[91m"; Y = "\033[93m"; C = "\033[96m"

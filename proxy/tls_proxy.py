@@ -239,20 +239,17 @@ class PolicyEngine:
         """
         pass
 
-    def evaluate(self, client_ip, api_key, rpc_method, tool_name):
+    def evaluate(self, client_ip, api_key, rpc_method, tool_name, local_port=None):
         """
         Evaluate whether a client may invoke a given MCP method/tool.
-
-        Args:
-            client_ip:  Source IP address of the client.
-            api_key:    Value of the X-MCP-API-Key header (may be empty).
-            rpc_method: JSON-RPC method string (e.g., "tools/call", "tools/list").
-            tool_name:  Tool name from params.name (only relevant for "tools/call").
-
-        Returns:
-            (allowed: bool, reason: str)
         """
         role_name = self._resolve_role(client_ip, api_key)
+        
+        # If unresolved (or defaulted) and on loopback, use the port-based role
+        if role_name == self.default_role and client_ip == "127.0.0.1" and local_port:
+            port_role_map = {8440:"full", 8441:"analyst", 8442:"analyst",
+                             8443:"readonly", 8444:"readonly", 8445:"readonly"}
+            role_name = port_role_map.get(local_port, self.default_role)
 
         # ── Step 0: Check rate limit ──
         client_key = f"{client_ip}:{api_key or 'nokey'}"
@@ -536,8 +533,16 @@ async def handle_client(client_r, client_w, backend_host, backend_port, policy):
             rpc_method = "__unparseable__"
 
         api_key = req.headers.get("x-mcp-api-key", "")
+        
+        # Get the listening port they connected to
+        local_port = client_w.get_extra_info('sockname')[1] if client_w.get_extra_info('sockname') else None
+        
         role_name = policy._resolve_role(client_ip, api_key)
-        allowed, reason = policy.evaluate(client_ip, api_key, rpc_method, tool_name)
+        if role_name == policy.default_role and client_ip == "127.0.0.1" and local_port:
+            port_role_map = {8440:"full", 8441:"analyst", 8442:"analyst", 8443:"readonly", 8444:"readonly", 8445:"readonly"}
+            role_name = port_role_map.get(local_port, policy.default_role)
+
+        allowed, reason = policy.evaluate(client_ip, api_key, rpc_method, tool_name, local_port=local_port)
 
         # Log payload details (server name, tool, arguments)
         decision_str = "ALLOW" if allowed else "DENY"
