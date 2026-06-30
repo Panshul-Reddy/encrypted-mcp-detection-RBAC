@@ -145,6 +145,8 @@ def _apply_fallback_policy():
     }
     DEFAULT_ROLE = "readonly"
 
+load_policy()
+
 def _log_rbac_decision(source_ip, role, server, confidence, decision, reason, action):
     os.makedirs(os.path.dirname(RBAC_LOG_PATH) or ".", exist_ok=True)
     entry = {
