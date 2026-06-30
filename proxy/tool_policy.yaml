@@ -15,9 +15,11 @@ roles:
 
 clients:
   by_ip:
-    "10.11.0.30": "full"
-    "10.11.0.40": "readonly"
-    "127.0.0.1": "full"
+    "10.11.0.30": "full"          # groq-client (full access)
+    "10.11.0.31": "analyst"       # restricted demo client
+    "127.0.0.1":  "full"          # localhost dev/testing
   by_api_key:
-    "testkey123": "full"
+    "full-access-key-001": "full"
+    "analyst-key-001":     "analyst"
+    "readonly-key-001":    "readonly"
   default_role: "readonly"

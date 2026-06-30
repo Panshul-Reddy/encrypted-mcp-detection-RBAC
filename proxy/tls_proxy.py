@@ -118,9 +118,20 @@ class PolicyEngine:
         except Exception as e:
             print(f"[policy] ERROR loading policy from {self.policy_path}: {e}",
                   file=sys.stderr)
-            self._set_permissive()
+            self._set_deny_all()
 
     def _set_permissive(self):
+        """
+        DEV/TEST ONLY — allow everything. 
+        Called only when explicitly no policy path is provided.
+        On YAML parse errors, _load_policy calls _set_deny_all() instead.
+        """
+        self.roles = {"full": {"allowed_methods": "*", "allowed_tools": "*"}}
+        self.ip_map = {}
+        self.api_key_map = {}
+        self.default_role = "full"
+
+    def _set_deny_all(self):
         """Fail CLOSED — deny everything on policy load error."""
         self.roles = {"deny_all": {"allowed_methods": [], "allowed_tools": []}}
         self.ip_map = {}
@@ -219,6 +230,14 @@ class PolicyEngine:
             return False, f"Rate limit exceeded for role '{role_name}' ({limit}/min)"
         self.request_counts[client_key].append(now)
         return True, ""
+
+    def _record_rate_limit(self, client_key: str):
+        """
+        No-op stub — timestamps are already appended inside _check_rate_limit().
+        This method exists only because evaluate() calls it after an ALLOW decision
+        on wildcard-tool roles, but the recording already happened upstream.
+        """
+        pass
 
     def evaluate(self, client_ip, api_key, rpc_method, tool_name):
         """
@@ -629,13 +648,20 @@ async def main():
     # ── Load Policy Engine ───────────────────────────────────────────────
     if args.policy and os.path.exists(args.policy):
         policy = PolicyEngine(args.policy)
+        if not policy.roles or policy.default_role == "deny_all":
+            print("[policy] FATAL: Policy file loaded but has no valid roles. "
+                  "Refusing to start in deny_all mode — check tool_policy.yaml structure.",
+                  file=sys.stderr)
+            sys.exit(1)
     else:
         if args.policy:
-            print(f"[policy] WARNING: Policy file not found at {args.policy}",
+            print(f"[policy] FATAL: Policy file not found at {args.policy}. "
+                  "Cannot start without a valid policy (fail-closed).",
                   file=sys.stderr)
-        print("[policy] No policy loaded — all requests will be forwarded "
-              "(backward compatible mode)", file=sys.stderr)
-        policy = PolicyEngine()  # No path → permissive defaults
+            sys.exit(1)
+        print("[policy] No --policy flag provided. Running in allow-all mode (dev only).",
+              file=sys.stderr)
+        policy = PolicyEngine()
         policy._set_permissive()
 
     # ── Set up audit logging ──────────────────────────────────────────────

@@ -95,26 +95,55 @@ def load_policy():
     try:
         with open(POLICY_PATH, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)
-        
+
+        if not config or "roles" not in config:
+            raise ValueError("Policy file exists but has no 'roles:' key. "
+                             "Check tool_policy.yaml structure.")
+
         IP_ROLES = config.get("clients", {}).get("by_ip", {})
         DEFAULT_ROLE = config.get("clients", {}).get("default_role", "readonly")
-        
         roles = config.get("roles", {})
         SERVER_POLICY.clear()
+
         for rname, rdef in roles.items():
             if isinstance(rdef, dict):
                 tools = rdef.get("allowed_tools", [])
                 if tools == "*":
-                    SERVER_POLICY[rname] = ["fetch", "memory", "filesystem", "github", "exa", "tavily"]
-                else:
+                    SERVER_POLICY[rname] = ["fetch", "memory", "filesystem",
+                                            "github", "exa", "tavily"]
+                elif isinstance(tools, list):
                     SERVER_POLICY[rname] = tools
-    except Exception as e:
-        print(f"Failed to load unified policy: {e}. Falling back to default.", file=sys.stderr)
-        SERVER_POLICY = {"full": ["fetch", "memory", "filesystem", "github", "exa", "tavily"], "readonly": ["fetch", "exa", "tavily"]}
-        IP_ROLES = {"127.0.0.1": "full"}
-        DEFAULT_ROLE = "readonly"
+                else:
+                    SERVER_POLICY[rname] = []
 
-load_policy()
+        if not SERVER_POLICY:
+            raise ValueError("No roles with 'allowed_tools' found in policy file.")
+
+        print(f"[policy] Loaded {len(SERVER_POLICY)} roles from {POLICY_PATH}",
+              file=sys.stderr)
+
+    except FileNotFoundError:
+        print(f"[policy] WARNING: {POLICY_PATH} not found. Using hardcoded fallback.",
+              file=sys.stderr)
+        _apply_fallback_policy()
+    except Exception as e:
+        print(f"[policy] ERROR: {e}. Using hardcoded fallback.", file=sys.stderr)
+        _apply_fallback_policy()
+
+
+def _apply_fallback_policy():
+    """Fallback used only when policy file is missing or malformed."""
+    global SERVER_POLICY, IP_ROLES, DEFAULT_ROLE
+    SERVER_POLICY = {
+        "full":     ["fetch", "memory", "filesystem", "github", "exa", "tavily"],
+        "analyst":  ["fetch", "exa", "tavily"],
+        "readonly": ["fetch"],
+    }
+    IP_ROLES = {
+        "10.11.0.30": "full",
+        "127.0.0.1":  "full",
+    }
+    DEFAULT_ROLE = "readonly"
 
 def _log_rbac_decision(source_ip, role, server, confidence, decision, reason, action):
     os.makedirs(os.path.dirname(RBAC_LOG_PATH) or ".", exist_ok=True)
@@ -145,19 +174,29 @@ def load_serialized_model(path: str):
     return model
 
 def select_target_model(total_pkts: int):
-    if total_pkts >= 30 and "full" in models:
-        return "full"
-    target_n = None
-    for n in reversed(THRESHOLDS):
+    """
+    Returns the best model key for a given packet count.
+    Tries the highest N-model whose threshold is met first.
+    Falls back to 'full' only if explicitly >= 30 packets AND full model exists.
+    N=20 model is correctly used for 20-29 packet flows.
+    """
+    # First: check per-N thresholds (in descending order)
+    for n in reversed(THRESHOLDS):   # [20, 15, 10, 8, 5, 3]
         if total_pkts >= n and n in models:
-            target_n = n
-            break
-    return target_n
+            # For 30+ packets, upgrade to full model if available
+            if total_pkts >= 30 and "full" in models:
+                return "full"
+            return n
+    # Not enough packets for any model yet
+    return None
 
 def resolve_role(source_ip: str, src_port: int, feat: list[float]) -> str:
-    # Hack for the native Windows demo: simulate multiple users on localhost
-    if source_ip == "127.0.0.1":
-        return "analyst" if src_port % 3 == 0 else "full"
+    """
+    Resolve source IP to a role using the policy file's IP map.
+    For demo purposes, known Docker subnet IPs map to specific roles.
+    The old port-modulo hack (src_port % 3) has been removed — it produced
+    random role assignments since ephemeral ports are OS-assigned.
+    """
     return IP_ROLES.get(source_ip, DEFAULT_ROLE)
 
 def required_confidence(target_n):
@@ -167,13 +206,24 @@ def required_confidence(target_n):
 
 def get_feature_indices(n: int) -> list[int]:
     """
-    Maps the progressive feature indices to the 115-dimension array sent by the Rust core.
+    Build the feature index list for an N-packet model.
+
+    Feature layout in the 115-dim array:
+      [0..15]   Base flow statistics (15 features)
+      [15..35]  Sequence packet sizes   — seq_size_00 at index 15
+      [35..55]  Sequence packet dirs    — seq_dir_00  at index 35
+      [55..75]  Sequence IATs           — seq_iat_00  at index 55 (ALWAYS 0.0)
+                                        — seq_iat_01  at index 56 (first real IAT)
+
+    NOTE: seq_iat_00 (index 55) is hardcoded to 0.0 in features.rs because the
+    first packet has no prior packet to measure against. We skip index 55 and
+    start IATs from index 56 to avoid feeding a constant-zero feature.
     """
-    indices = list(range(15)) # Base 15 features
+    indices = list(range(15))  # Base 15 features
     for i in range(n):
-        indices.append(15 + i) # seq_size
-        indices.append(35 + i) # seq_dir
-        indices.append(55 + i) # seq_iat
+        indices.append(15 + i)       # seq_size[0..n-1]
+        indices.append(35 + i)       # seq_dir[0..n-1]
+        indices.append(56 + i)       # seq_iat[1..n]  — skip index 55 (always 0)
     return indices
 
 @app.on_event("startup")
