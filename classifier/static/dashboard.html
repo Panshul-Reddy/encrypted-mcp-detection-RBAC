@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastFlow ML Inference Dashboard</title>
+    <style>
+        /* Typography and Colors */
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg-dark: #09090b;
+            --bg-panel: #18181b;
+            --bg-hover: #27272a;
+            --text-primary: #f4f4f5;
+            --text-secondary: #a1a1aa;
+            
+            --color-mcp: #22c55e;
+            --color-normal: #3b82f6;
+            --color-wait: #eab308;
+            --color-wrong: #ef4444;
+            --color-border: #27272a;
+            
+            --font-mono: 'Fira Code', monospace;
+            --font-sans: 'Inter', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Top Header & Stats */
+        header {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--color-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        h1::before {
+            content: '';
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background-color: var(--color-mcp);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--color-mcp);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+
+        .stats-container {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            min-width: 120px;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: #52525b;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            font-family: var(--font-mono);
+        }
+
+        .stat-value.mcp { color: var(--color-mcp); }
+        .stat-value.normal { color: var(--color-normal); }
+        .stat-value.wait { color: var(--color-wait); }
+
+        /* Main Layout */
+        .main-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Flow Table */
+        .table-container {
+            flex: 2;
+            overflow-y: auto;
+            border-right: 1px solid var(--color-border);
+            padding: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+        }
+
+        th {
+            position: sticky;
+            top: 0;
+            background: var(--bg-dark);
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--color-border);
+            z-index: 10;
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--color-border);
+            transition: background-color 0.15s;
+        }
+
+        tr {
+            cursor: pointer;
+        }
+
+        tr:hover td {
+            background-color: var(--bg-hover);
+        }
+        
+        tr.selected td {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .row-correct td:first-child { border-left: 3px solid var(--color-mcp); }
+        .row-wrong td:first-child { border-left: 3px solid var(--color-wrong); }
+        .row-wait td:first-child { border-left: 3px solid var(--color-wait); }
+
+        .label-mcp { color: var(--color-mcp); font-weight: 600; }
+        .label-normal { color: var(--color-normal); }
+        .label-wait { color: var(--color-wait); }
+
+        .match-icon {
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        /* Sidebar Visualization */
+        .sidebar {
+            flex: 1;
+            background: var(--bg-panel);
+            padding: 2rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .sidebar h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .sidebar p.subtitle {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            font-family: var(--font-mono);
+        }
+
+        .viz-section {
+            background: var(--bg-dark);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .viz-title {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Bar Chart */
+        .bar-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .bar-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .bar-label {
+            width: 80px;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-align: right;
+        }
+
+        .bar-track {
+            flex: 1;
+            height: 8px;
+            background: var(--bg-panel);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: var(--color-normal);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .bar-val {
+            width: 50px;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+        }
+
+        /* Sparklines */
+        .sparkline-container {
+            margin-top: 1rem;
+        }
+        
+        canvas.sparkline {
+            width: 100%;
+            height: 60px;
+            display: block;
+            background: rgba(0,0,0,0.2);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>FastFlow ML Inference</h1>
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-label">Total Flows</div>
+                <div class="stat-value" id="total">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Accuracy</div>
+                <div class="stat-value" id="accuracy">0.0%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">MCP Detections</div>
+                <div class="stat-value mcp" id="mcp">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Normal</div>
+                <div class="stat-value normal" id="normal">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Waiting</div>
+                <div class="stat-value wait" id="unknown">0</div>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-layout">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Source</th>
+                        <th>Destination</th>
+                        <th>Ground Truth</th>
+                        <th>Prediction</th>
+                        <th>Match</th>
+                        <th>Model</th>
+                        <th>Conf</th>
+                        <th>Pkts</th>
+                    </tr>
+                </thead>
+                <tbody id="flow-table-body">
+                    <!-- Rows populated via JS -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="sidebar">
+            <div>
+                <h2>Feature Extraction</h2>
+                <p class="subtitle" id="selected-flow-id">Waiting for flow...</p>
+            </div>
+
+            <div class="viz-section">
+                <div class="viz-title">Base Flow Statistics</div>
+                <div class="bar-chart" id="base-features-chart">
+                    <!-- Bars populated via JS -->
+                </div>
+            </div>
+
+            <div class="viz-section">
+                <div class="viz-title">Packet Size Sequence (First 20)</div>
+                <div class="sparkline-container">
+                    <canvas id="sparkline-size" class="sparkline"></canvas>
+                </div>
+            </div>
+            
+            <div class="viz-section">
+                <div class="viz-title">Packet Direction Sequence (+1/-1)</div>
+                <div class="sparkline-container">
+                    <canvas id="sparkline-dir" class="sparkline"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFlows = [];
+        let selectedFlowId = null;
+
+        const baseFeatureNames = [
+            "duration", "total_pkts", "total_bytes", 
+            "pkts_up", "pkts_down", "bytes_up", "bytes_down",
+            "pkts_ratio", "bytes_ratio", "rate_pkts", "rate_bytes"
+        ];
+
+        async function refresh() {
+            try {
+                const [flows, stats] = await Promise.all([
+                    fetch('/api/flows').then(r => r.json()),
+                    fetch('/api/stats').then(r => r.json())
+                ]);
+
+                currentFlows = flows;
+
+                // Update Stats
+                document.getElementById('total').textContent = stats.total_flows;
+                document.getElementById('accuracy').textContent = stats.accuracy + '%';
+                document.getElementById('mcp').textContent = stats.mcp_count;
+                document.getElementById('normal').textContent = stats.normal_count;
+                document.getElementById('unknown').textContent = stats.unknown_count;
+
+                // Build Table
+                const tbody = document.getElementById('flow-table-body');
+                tbody.innerHTML = flows.slice(0, 50).map(f => {
+                    const rowClass = f.match === true ? 'row-correct' : f.match === false ? 'row-wrong' : 'row-wait';
+                    const gtClass = f.ground_truth === 'MCP' ? 'label-mcp' : 'label-normal';
+                    const predClass = f.prediction === 'Unknown_wait' ? 'label-wait' : f.prediction.includes('MCP') ? 'label-mcp' : 'label-normal';
+                    const matchIcon = f.match === null ? '⏳' : f.match ? '✅' : '❌';
+                    const isSelected = f.id === selectedFlowId ? 'selected' : '';
+
+                    return `
+                        <tr class="${rowClass} ${isSelected}" onclick="selectFlow('${f.id}')">
+                            <td>${f.ts}</td>
+                            <td>${f.src}</td>
+                            <td>${f.dst}</td>
+                            <td class="${gtClass}">${f.ground_truth}</td>
+                            <td class="${predClass}">${f.prediction}</td>
+                            <td class="match-icon">${matchIcon}</td>
+                            <td>${f.model}</td>
+                            <td>${f.confidence.toFixed(3)}</td>
+                            <td>${f.packet_count}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                // Auto-select latest flow if none selected
+                if (!selectedFlowId && flows.length > 0) {
+                    selectFlow(flows[0].id);
+                } else if (selectedFlowId) {
+                    // re-render the viz for the selected flow (in case data updated)
+                    renderViz(selectedFlowId);
+                }
+            } catch (e) {
+                console.error("Failed to fetch data", e);
+            }
+        }
+
+        function selectFlow(id) {
+            selectedFlowId = id;
+            document.querySelectorAll('#flow-table-body tr').forEach(tr => tr.classList.remove('selected'));
+            renderViz(id);
+        }
+
+        function renderViz(id) {
+            const flow = currentFlows.find(f => f.id === id);
+            if (!flow || !flow.features) return;
+
+            document.getElementById('selected-flow-id').textContent = `Flow ID: ${flow.id}`;
+            
+            const feats = flow.features;
+            // feats[0-14]: base features
+            // feats[15-34]: seq_size
+            // feats[35-54]: seq_dir
+
+            // 1. Base Features Bar Chart (first 11 only for brevity)
+            const chartHtml = baseFeatureNames.map((name, i) => {
+                const val = feats[i] || 0;
+                // normalize roughly for viz (very hacky, just for relative visual)
+                const maxExpected = i === 0 ? 10 : (i === 1 || i === 3 || i === 4 ? 50 : 10000);
+                let pct = (val / maxExpected) * 100;
+                if (pct > 100) pct = 100;
+                if (pct < 1 && val > 0) pct = 2; // min visible
+
+                return `
+                    <div class="bar-row">
+                        <div class="bar-label">${name}</div>
+                        <div class="bar-track">
+                            <div class="bar-fill" style="width: ${pct}%"></div>
+                        </div>
+                        <div class="bar-val">${val > 1000 ? (val/1000).toFixed(1)+'k' : Number.isInteger(val) ? val : val.toFixed(2)}</div>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('base-features-chart').innerHTML = chartHtml;
+
+            // 2. Sparklines
+            drawSparkline('sparkline-size', feats.slice(15, 35), 'rgba(59, 130, 246, 1)'); // blue
+            drawSparkline('sparkline-dir', feats.slice(35, 55), 'rgba(34, 197, 94, 1)', true); // green, bipolar
+        }
+
+        function drawSparkline(canvasId, data, color, isBipolar = false) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            // Adjust resolution
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            
+            const w = rect.width;
+            const h = rect.height;
+            
+            ctx.clearRect(0, 0, w, h);
+            
+            if (!data || data.length === 0) return;
+
+            const max = isBipolar ? 1 : Math.max(...data, 1);
+            const min = isBipolar ? -1 : 0;
+            const range = max - min;
+            
+            const step = w / Math.max(data.length - 1, 1);
+            
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.lineJoin = 'round';
+            
+            data.forEach((val, i) => {
+                const x = i * step;
+                // normalize y
+                const normalized = (val - min) / (range || 1);
+                const y = h - (normalized * h * 0.8 + h * 0.1); // add 10% padding
+                
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            
+            ctx.stroke();
+            
+            // Draw baseline for bipolar
+            if (isBipolar) {
+                ctx.beginPath();
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4, 4]);
+                const midY = h / 2;
+                ctx.moveTo(0, midY);
+                ctx.lineTo(w, midY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+
+        setInterval(refresh, 1500);
+        refresh(); // initial load
+    </script>
+</body>
+</html>

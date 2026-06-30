@@ -381,8 +381,9 @@ async fn run_classification_pipeline(
         };
 
         let src_ip_str = std::net::Ipv4Addr::from(flow.key.src_ip).to_string();
+        let dst_ip_str = std::net::Ipv4Addr::from(flow.key.dst_ip).to_string();
 
-        match client.predict(&features, &src_ip_str).await {
+        match client.predict(&features, &src_ip_str, flow.key.src_port, &dst_ip_str, flow.key.dst_port).await {
             Ok((prediction, latency)) => {
                 let classified = ClassifiedFlow {
                     flow_display: flow.key.display(),

@@ -30,6 +30,9 @@ impl Default for InferenceConfig {
 struct PredictRequest {
     features: Vec<f64>,
     source_ip: String,
+    src_port: u16,
+    dst_ip: String,
+    dst_port: u16,
 }
 
 #[derive(Debug, Serialize)]
@@ -85,11 +88,17 @@ impl InferenceClient {
         &self,
         features: &[f64; 115],
         source_ip: &str,
+        src_port: u16,
+        dst_ip: &str,
+        dst_port: u16,
     ) -> Result<(PredictResponse, Duration)> {
         let url = format!("{}/predict", self.config.base_url);
         let body = PredictRequest {
             features: features.to_vec(),
             source_ip: source_ip.to_string(),
+            src_port,
+            dst_ip: dst_ip.to_string(),
+            dst_port,
         };
 
         let start = Instant::now();
@@ -126,11 +135,20 @@ impl InferenceClient {
     /// Classify a batch of feature vectors.
     pub async fn predict_batch(
         &self,
-        batch: &[(&[f64; 115], &str)],
+        batch: &[(&[f64; 115], &str, u16, &str, u16)],
     ) -> Result<(Vec<PredictResponse>, Duration)> {
         let url = format!("{}/predict_batch", self.config.base_url);
         let body = PredictBatchRequest {
-            batch: batch.iter().map(|(f, ip)| PredictRequest { features: f.to_vec(), source_ip: ip.to_string() }).collect(),
+            batch: batch
+                .iter()
+                .map(|(f, src_ip, src_port, dst_ip, dst_port)| PredictRequest {
+                    features: f.to_vec(),
+                    source_ip: src_ip.to_string(),
+                    src_port: *src_port,
+                    dst_ip: dst_ip.to_string(),
+                    dst_port: *dst_port,
+                })
+                .collect(),
         };
 
         let start = Instant::now();

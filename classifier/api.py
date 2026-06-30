@@ -8,6 +8,8 @@ the number of observed packets in the network flow.
 """
 
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import joblib
 import numpy as np
@@ -15,12 +17,53 @@ import os
 import sys
 import time
 import json
+import uuid
+from collections import deque
 from typing import Optional
 
 app = FastAPI(title="FastFlow Early Inference API")
 
 THRESHOLDS = [3, 5, 8, 10, 15, 20]
 models = {}
+flow_log = deque(maxlen=200)
+
+def get_ground_truth(dst_port: int) -> str:
+    # 8765 is the noise-server port in this project architecture, wait. 
+    # Ah! The user prompt says "Ground truth is derived from destination port: port 8765 = MCP, everything else = normal."
+    # Wait, the prompt says "port 8765 = MCP". If so, let's use that.
+    return "MCP" if dst_port == 8765 else "normal"
+
+def log_classification(src_ip, src_port, dst_ip, dst_port,
+                       prediction_label, rbac_decision, confidence, model_used, packet_count, feats):
+    gt = get_ground_truth(dst_port)
+    
+    # Normalize prediction for UI
+    if rbac_decision == "WAIT":
+        prediction = "Unknown_wait"
+    elif prediction_label == "noise":
+        prediction = "normal"
+    else:
+        prediction = "MCP_encrypted"
+        
+    pred_normalized = "MCP" if prediction == "MCP_encrypted" else prediction
+    
+    match_val = None
+    if prediction != "Unknown_wait":
+        match_val = (pred_normalized == gt)
+        
+    flow_log.appendleft({
+        "id": str(uuid.uuid4())[:8],
+        "ts": time.strftime("%H:%M:%S"),
+        "src": f"{src_ip}:{src_port}",
+        "dst": f"{dst_ip}:{dst_port}",
+        "ground_truth": gt,
+        "prediction": prediction,
+        "match": match_val,
+        "model": f"N={model_used}" if str(model_used).isdigit() else model_used,
+        "confidence": round(float(confidence), 3),
+        "packet_count": packet_count,
+        "features": feats[:55] # send first 55 features for the UI visualization (base 15 + seq_size 20 + seq_dir 20)
+    })
 
 # =============================================================================
 # Encrypted RBAC — No Decryption Required (Layer 4)
@@ -130,6 +173,9 @@ def load_models():
 class PredictRequest(BaseModel):
     features: list[float]
     source_ip: Optional[str] = None
+    src_port: Optional[int] = 0
+    dst_ip: Optional[str] = None
+    dst_port: Optional[int] = 0
 
 class PredictBatchRequest(BaseModel):
     batch: list[PredictRequest]
@@ -157,6 +203,8 @@ def predict(req: PredictRequest):
             
     if target_n is None:
         _log_rbac_decision(source_ip, role, "unknown", 0.0, "WAIT", "Waiting for more packets", "CLASSIFIED")
+        log_classification(req.source_ip or "?", req.src_port or 0, req.dst_ip or "?", req.dst_port or 0,
+                           "unknown", "WAIT", 0.0, "None", total_pkts, feat)
         return {
             "label": -1, 
             "proba": [0.0, 0.0],
@@ -196,6 +244,8 @@ def predict(req: PredictRequest):
         min_conf = required_confidence(target_n)
         if target_n != "full" and confidence < min_conf:
             _log_rbac_decision(source_ip, role, server_name, confidence, "WAIT", f"Confidence {confidence*100:.1f}% below threshold, waiting for more packets", "CLASSIFIED")
+            log_classification(req.source_ip or "?", req.src_port or 0, req.dst_ip or "?", req.dst_port or 0,
+                               server_name, "WAIT", confidence, target_n, total_pkts, feat)
             return {
                 "label": -1,
                 "proba": [noise_prob, mcp_prob] if 'noise_prob' in locals() else probas.tolist(),
@@ -213,6 +263,8 @@ def predict(req: PredictRequest):
             rbac_reason = f"Role '{role}' is NOT allowed to access server '{server_name}' (allowed: {', '.join(allowed_servers)})"
 
     _log_rbac_decision(source_ip, role, server_name, confidence, rbac_decision, rbac_reason, "CLASSIFIED")
+    log_classification(req.source_ip or "?", req.src_port or 0, req.dst_ip or "?", req.dst_port or 0,
+                       server_name, rbac_decision, confidence, target_n, total_pkts, feat)
 
     return {
         "label": label,
@@ -239,6 +291,8 @@ def predict_batch(req: PredictBatchRequest):
             source_ip = item.source_ip or ""
             role = resolve_role(source_ip, feat)
             _log_rbac_decision(source_ip, role, "unknown", 0.0, "WAIT", "Waiting for more packets", "CLASSIFIED")
+            log_classification(item.source_ip or "?", item.src_port or 0, item.dst_ip or "?", item.dst_port or 0,
+                               "unknown", "WAIT", 0.0, "None", total_pkts, feat)
             predictions[idx] = {
                 "label": -1, 
                 "proba": [0.0, 0.0],
@@ -263,7 +317,9 @@ def predict_batch(req: PredictBatchRequest):
             
         probas_batch = model.predict_proba(x)
         
-        for i, probas, ip, feat in zip(indices, probas_batch, ips, feats):
+        orig_items = [item[1] for item in items]
+        
+        for i, probas, ip, feat, orig_req in zip(indices, probas_batch, ips, feats, orig_items):
             noise_prob = float(probas[0])
             mcp_prob = float(sum(probas[1:]))
             
@@ -279,6 +335,7 @@ def predict_batch(req: PredictBatchRequest):
                 ip = "127.0.0.1"
                 
             role = resolve_role(ip, feat)
+            total_pkts = int(feat[1])
             
             if server_name == "noise":
                 rbac_decision = "PASS"
@@ -288,6 +345,8 @@ def predict_batch(req: PredictBatchRequest):
                 min_conf = required_confidence(target_n)
                 if target_n != "full" and confidence < min_conf:
                     _log_rbac_decision(ip, role, server_name, confidence, "WAIT", f"Confidence {confidence*100:.1f}% below threshold", "CLASSIFIED")
+                    log_classification(orig_req.source_ip or "?", orig_req.src_port or 0, orig_req.dst_ip or "?", orig_req.dst_port or 0,
+                                       server_name, "WAIT", confidence, target_n, total_pkts, feat)
                     predictions[i] = {
                         "label": -1,
                         "proba": [noise_prob, mcp_prob],
@@ -306,6 +365,8 @@ def predict_batch(req: PredictBatchRequest):
                     rbac_reason = f"Role '{role}' denied"
 
             _log_rbac_decision(ip, role, server_name, confidence, rbac_decision, rbac_reason, "CLASSIFIED")
+            log_classification(orig_req.source_ip or "?", orig_req.src_port or 0, orig_req.dst_ip or "?", orig_req.dst_port or 0,
+                               server_name, rbac_decision, confidence, target_n, total_pkts, feat)
                 
             predictions[i] = {
                 "label": int(label),
@@ -315,6 +376,30 @@ def predict_batch(req: PredictBatchRequest):
             }
             
     return {"predictions": predictions}
+
+@app.get("/api/flows")
+def api_flows():
+    return list(flow_log)
+
+@app.get("/api/stats")
+def api_stats():
+    total = len(flow_log)
+    decided = [f for f in flow_log if f["match"] is not None]
+    correct = sum(1 for f in decided if f["match"])
+    return {
+        "total_flows": total,
+        "accuracy": round(correct / len(decided) * 100, 1) if decided else 0,
+        "mcp_count": sum(1 for f in flow_log if f["ground_truth"] == "MCP"),
+        "normal_count": sum(1 for f in flow_log if f["ground_truth"] == "normal"),
+        "unknown_count": sum(1 for f in flow_log if f["prediction"] == "Unknown_wait"),
+    }
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/")
+def dashboard():
+    return HTMLResponse(content=open("static/dashboard.html", "r", encoding="utf-8").read(), status_code=200)
 
 def _log_rbac_decision(source_ip, role, server, confidence, decision, reason, action):
     os.makedirs(os.path.dirname(RBAC_LOG_PATH) or ".", exist_ok=True)
