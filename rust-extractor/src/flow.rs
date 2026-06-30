@@ -183,9 +183,10 @@ impl Flow {
         // 8443: github (4)
         // 8444: exa (5)
         // 8445: tavily (6)
-        // 9443: noise (0)
+        // 9443: noise (0) (container internal)
+        // 9444: noise (0) (host mapping)
 
-        if dport == 9443 || sport == 9443 || dport == 8446 || sport == 8446 {
+        if dport == 9443 || sport == 9443 || dport == 9444 || sport == 9444 || dport == 8446 || sport == 8446 {
             return Some(0);
         }
 
@@ -194,31 +195,35 @@ impl Flow {
         // Cloudflare, etc.) that reach MCP ports via the proxy have different RTT,
         // packet sizing, and timing characteristics — labelling them as MCP would
         // contaminate the training data with out-of-distribution samples.
-        let src_is_internal =
-            (self.key.src_ip & MCP_CLIENT_MASK) == MCP_CLIENT_SUBNET || self.key.src_ip == 0x7F00_0001; // 127.0.0.1
+        let src_is_internal = (self.key.src_ip & MCP_CLIENT_MASK) == MCP_CLIENT_SUBNET
+            || self.key.src_ip == 0x7F00_0001   // 127.0.0.1
+            || self.key.src_ip == 0x0000_0001;  // 0.0.0.1 (Windows loopback alias)
 
         if !src_is_internal {
             return None; // Exclude external-origin flows (label 255 in CSV)
         }
 
-        if dport == 8440 || sport == 8440 {
-            return Some(1);
-        } else if dport == 8441 || sport == 8441 {
-            return Some(2);
-        } else if dport == 8442 || sport == 8442 {
-            return Some(3);
-        } else if dport == 8443 || sport == 8443 {
-            return Some(4);
-        } else if dport == 8444 || sport == 8444 {
-            return Some(5);
-        } else if dport == 8445 || sport == 8445 {
-            return Some(6);
+        // Only label as MCP if destined for a known MCP port
+        match dport {
+            8440 => Some(1),
+            8441 => Some(2),
+            8442 => Some(3),
+            8443 => Some(4),
+            8444 => Some(5),
+            8445 => Some(6),
+            _ => match sport {
+                8440 => Some(1),
+                8441 => Some(2),
+                8442 => Some(3),
+                8443 => Some(4),
+                8444 => Some(5),
+                8445 => Some(6),
+                _ => None,
+            }
         }
-
-        None
     }
 }
 
 pub fn is_server_endpoint(_ip: u32, port: u16) -> bool {
-    (8440..=8445).contains(&port) || port == 9443
+    (8440..=8445).contains(&port) || port == 9443 || port == 9444 || port == 8446
 }

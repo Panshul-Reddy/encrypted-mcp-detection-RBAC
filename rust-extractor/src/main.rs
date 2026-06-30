@@ -55,7 +55,7 @@ struct Args {
     bpf_filter: String,
 
     /// Inference sidecar URL.
-    #[arg(long, default_value = "http://localhost:5000")]
+    #[arg(long, default_value = "http://localhost:5050")]
     inference_url: String,
 
     /// Flow idle timeout in seconds.
