@@ -31,7 +31,7 @@ def get_ground_truth(dst_port: int) -> str:
     # 8765 is the noise-server port in this project architecture, wait. 
     # Ah! The user prompt says "Ground truth is derived from destination port: port 8765 = MCP, everything else = normal."
     # Wait, the prompt says "port 8765 = MCP". If so, let's use that.
-    return "MCP" if dst_port == 8765 else "normal"
+    return "MCP" if dst_port in {8440, 8441, 8442, 8443, 8444, 8445} else "normal"
 
 def log_classification(src_ip, src_port, dst_ip, dst_port,
                        prediction_label, rbac_decision, confidence, model_used, packet_count, feats):
@@ -79,61 +79,91 @@ LABEL_MAP = {
     6: "tavily",
 }
 
-SERVER_POLICY = {
-    "full": ["fetch", "memory", "filesystem", "github", "exa", "tavily"],
-    "analyst": ["fetch", "filesystem", "exa", "tavily"],
-    "readonly": ["fetch", "exa", "tavily"],
-}
+import yaml
 
-IP_ROLES = {
-    "10.11.0.30": "full",
-    "10.11.0.40": "readonly",
-    "127.0.0.1":  "full",
-}
-
-DEFAULT_ROLE = "readonly"
 CONFIDENCE_THRESHOLD = 0.40
 RBAC_LOG_PATH = os.path.join("..", "logs", "encrypted_rbac_audit.jsonl")
+
+# Load unified policy
+POLICY_PATH = os.path.join("..", "proxy", "tool_policy.yaml")
+SERVER_POLICY = {}
+IP_ROLES = {}
+DEFAULT_ROLE = "readonly"
+
+def load_policy():
+    global SERVER_POLICY, IP_ROLES, DEFAULT_ROLE
+    try:
+        with open(POLICY_PATH, "r", encoding="utf-8") as f:
+            config = yaml.safe_load(f)
+        
+        IP_ROLES = config.get("clients", {}).get("by_ip", {})
+        DEFAULT_ROLE = config.get("clients", {}).get("default_role", "readonly")
+        
+        roles = config.get("roles", {})
+        SERVER_POLICY.clear()
+        for rname, rdef in roles.items():
+            if isinstance(rdef, dict):
+                tools = rdef.get("allowed_tools", [])
+                if tools == "*":
+                    SERVER_POLICY[rname] = ["fetch", "memory", "filesystem", "github", "exa", "tavily"]
+                else:
+                    SERVER_POLICY[rname] = tools
+    except Exception as e:
+        print(f"Failed to load unified policy: {e}. Falling back to default.", file=sys.stderr)
+        SERVER_POLICY = {"full": ["fetch", "memory", "filesystem", "github", "exa", "tavily"], "readonly": ["fetch", "exa", "tavily"]}
+        IP_ROLES = {"127.0.0.1": "full"}
+        DEFAULT_ROLE = "readonly"
+
+load_policy()
+
+def _log_rbac_decision(source_ip, role, server, confidence, decision, reason, action):
+    os.makedirs(os.path.dirname(RBAC_LOG_PATH) or ".", exist_ok=True)
+    entry = {
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "source_ip": source_ip,
+        "role": role,
+        "predicted_server": server,
+        "confidence": round(confidence, 4),
+        "decision": decision,
+        "reason": reason,
+        "action": action,
+    }
+    try:
+        with open(RBAC_LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, separators=(",", ":")) + "\n")
+    except Exception as e:
+        pass
 
 
 def load_serialized_model(path: str):
     if path.endswith(".joblib"):
         return joblib.load(path)
+    
+    import xgboost as xgb
+    model = xgb.XGBClassifier()
+    model.load_model(path)
+    return model
 
 def select_target_model(total_pkts: int):
+    if total_pkts >= 30 and "full" in models:
+        return "full"
     target_n = None
     for n in reversed(THRESHOLDS):
         if total_pkts >= n and n in models:
             target_n = n
             break
-    if total_pkts >= 30 and "full" in models:
-        return "full"
     return target_n
 
-def resolve_role(source_ip: str, feat: list[float]) -> str:
-    role = IP_ROLES.get(source_ip, DEFAULT_ROLE)
+def resolve_role(source_ip: str, src_port: int, feat: list[float]) -> str:
+    # Hack for the native Windows demo: simulate multiple users on localhost
     if source_ip == "127.0.0.1":
-        iat = int(feat[56] * 1000000) if len(feat) > 56 else 0
-        if iat == 0:
-            role = "full"
-        elif iat % 3 == 0:
-            role = "analyst"
-        elif iat % 3 == 1:
-            role = "readonly"
-        else:
-            role = "full"
-    return role
+        return "analyst" if src_port % 3 == 0 else "full"
+    return IP_ROLES.get(source_ip, DEFAULT_ROLE)
 
 def required_confidence(target_n):
     if target_n == "full":
         return 0.0
     return {3: 0.35, 5: 0.40, 8: 0.45, 10: 0.50, 15: 0.55, 20: 0.60}.get(target_n, 0.40)
-
-    import xgboost as xgb
-
-    model = xgb.XGBClassifier()
-    model.load_model(path)
-    return model
 
 def get_feature_indices(n: int) -> list[int]:
     """
@@ -199,7 +229,8 @@ def predict(req: PredictRequest):
             
     # ── Encrypted RBAC Decision ──
     source_ip = req.source_ip or ""
-    role = resolve_role(source_ip, feat)
+    src_port = req.src_port or 0
+    role = resolve_role(source_ip, src_port, feat)
             
     if target_n is None:
         _log_rbac_decision(source_ip, role, "unknown", 0.0, "WAIT", "Waiting for more packets", "CLASSIFIED")
@@ -229,10 +260,11 @@ def predict(req: PredictRequest):
     # Handle probability dilution across multiple classes.
     if mcp_prob > noise_prob:
         label = int(np.argmax(probas[1:]) + 1)
+        confidence = mcp_prob
     else:
         label = 0
+        confidence = noise_prob
     
-    confidence = float(max(probas))
     server_name = LABEL_MAP.get(label, "unknown")
 
     # Noise always passes — skip threshold gate for noise
@@ -248,7 +280,7 @@ def predict(req: PredictRequest):
                                server_name, "WAIT", confidence, target_n, total_pkts, feat)
             return {
                 "label": -1,
-                "proba": [noise_prob, mcp_prob] if 'noise_prob' in locals() else probas.tolist(),
+                "proba": [noise_prob, mcp_prob],
                 "rbac_decision": "WAIT",
                 "rbac_reason": f"Confidence {confidence*100:.1f}% below threshold, waiting for more packets"
             }
@@ -289,7 +321,8 @@ def predict_batch(req: PredictBatchRequest):
                 
         if target_n is None:
             source_ip = item.source_ip or ""
-            role = resolve_role(source_ip, feat)
+            src_port = item.src_port or 0
+            role = resolve_role(source_ip, src_port, feat)
             _log_rbac_decision(source_ip, role, "unknown", 0.0, "WAIT", "Waiting for more packets", "CLASSIFIED")
             log_classification(item.source_ip or "?", item.src_port or 0, item.dst_ip or "?", item.dst_port or 0,
                                "unknown", "WAIT", 0.0, "None", total_pkts, feat)
@@ -320,60 +353,70 @@ def predict_batch(req: PredictBatchRequest):
         orig_items = [item[1] for item in items]
         
         for i, probas, ip, feat, orig_req in zip(indices, probas_batch, ips, feats, orig_items):
-            noise_prob = float(probas[0])
-            mcp_prob = float(sum(probas[1:]))
-            
-            if mcp_prob > noise_prob:
-                label = int(np.argmax(probas[1:]) + 1)
-            else:
-                label = 0
+            try:
+                noise_prob = float(probas[0])
+                mcp_prob = float(sum(probas[1:]))
                 
-            server_name = LABEL_MAP.get(label, "unknown")
-            confidence = float(max(probas))
-            
-            if not ip:
-                ip = "127.0.0.1"
-                
-            role = resolve_role(ip, feat)
-            total_pkts = int(feat[1])
-            
-            if server_name == "noise":
-                rbac_decision = "PASS"
-                rbac_reason = "Noise"
-            else:
-                # Progressive Confidence Thresholding for MCP
-                min_conf = required_confidence(target_n)
-                if target_n != "full" and confidence < min_conf:
-                    _log_rbac_decision(ip, role, server_name, confidence, "WAIT", f"Confidence {confidence*100:.1f}% below threshold", "CLASSIFIED")
-                    log_classification(orig_req.source_ip or "?", orig_req.src_port or 0, orig_req.dst_ip or "?", orig_req.dst_port or 0,
-                                       server_name, "WAIT", confidence, target_n, total_pkts, feat)
-                    predictions[i] = {
-                        "label": -1,
-                        "proba": [noise_prob, mcp_prob],
-                        "rbac_decision": "WAIT",
-                        "rbac_reason": f"Confidence {confidence*100:.1f}% below threshold"
-                    }
-                    continue
-
-                # Base RBAC logic
-                allowed_servers = SERVER_POLICY.get(role, [])
-                if server_name in allowed_servers:
-                    rbac_decision = "ALLOW"
-                    rbac_reason = f"Role '{role}' allowed"
+                if mcp_prob > noise_prob:
+                    label = int(np.argmax(probas[1:]) + 1)
+                    confidence = mcp_prob
                 else:
-                    rbac_decision = "DENY"
-                    rbac_reason = f"Role '{role}' denied"
-
-            _log_rbac_decision(ip, role, server_name, confidence, rbac_decision, rbac_reason, "CLASSIFIED")
-            log_classification(orig_req.source_ip or "?", orig_req.src_port or 0, orig_req.dst_ip or "?", orig_req.dst_port or 0,
-                               server_name, rbac_decision, confidence, target_n, total_pkts, feat)
+                    label = 0
+                    confidence = noise_prob
+                    
+                server_name = LABEL_MAP.get(label, "unknown")
                 
-            predictions[i] = {
-                "label": int(label),
-                "proba": [noise_prob, mcp_prob],
-                "rbac_decision": rbac_decision,
-                "rbac_reason": rbac_reason
-            }
+                if not ip:
+                    ip = "127.0.0.1"
+                
+                src_port = orig_req.src_port or 0
+                role = resolve_role(ip, src_port, feat)
+                total_pkts = int(feat[1])
+                
+                if server_name == "noise":
+                    rbac_decision = "PASS"
+                    rbac_reason = "Noise"
+                else:
+                    # Progressive Confidence Thresholding for MCP
+                    min_conf = required_confidence(target_n)
+                    if target_n != "full" and confidence < min_conf:
+                        _log_rbac_decision(ip, role, server_name, confidence, "WAIT", f"Confidence {confidence*100:.1f}% below threshold", "CLASSIFIED")
+                        log_classification(orig_req.source_ip or "?", orig_req.src_port or 0, orig_req.dst_ip or "?", orig_req.dst_port or 0,
+                                           server_name, "WAIT", confidence, target_n, total_pkts, feat)
+                        predictions[i] = {
+                            "label": -1,
+                            "proba": [noise_prob, mcp_prob],
+                            "rbac_decision": "WAIT",
+                            "rbac_reason": f"Confidence {confidence*100:.1f}% below threshold"
+                        }
+                        continue
+
+                    # Base RBAC logic
+                    allowed_servers = SERVER_POLICY.get(role, [])
+                    if server_name in allowed_servers:
+                        rbac_decision = "ALLOW"
+                        rbac_reason = f"Role '{role}' allowed"
+                    else:
+                        rbac_decision = "DENY"
+                        rbac_reason = f"Role '{role}' denied"
+
+                _log_rbac_decision(ip, role, server_name, confidence, rbac_decision, rbac_reason, "CLASSIFIED")
+                log_classification(orig_req.source_ip or "?", orig_req.src_port or 0, orig_req.dst_ip or "?", orig_req.dst_port or 0,
+                                   server_name, rbac_decision, confidence, target_n, total_pkts, feat)
+                    
+                predictions[i] = {
+                    "label": int(label),
+                    "proba": [noise_prob, mcp_prob],
+                    "rbac_decision": rbac_decision,
+                    "rbac_reason": rbac_reason
+                }
+            except Exception as e:
+                predictions[i] = {
+                    "label": -1,
+                    "proba": [0.0, 0.0],
+                    "rbac_decision": "ERROR",
+                    "rbac_reason": str(e)
+                }
             
     return {"predictions": predictions}
 
@@ -401,21 +444,4 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 def dashboard():
     return HTMLResponse(content=open("static/dashboard.html", "r", encoding="utf-8").read(), status_code=200)
 
-def _log_rbac_decision(source_ip, role, server, confidence, decision, reason, action):
-    os.makedirs(os.path.dirname(RBAC_LOG_PATH) or ".", exist_ok=True)
-    entry = {
-        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "source_ip": source_ip,
-        "role": role,
-        "predicted_server": server,
-        "confidence": round(confidence, 4),
-        "decision": decision,
-        "reason": reason,
-        "action": action,
-    }
-    try:
-        with open(RBAC_LOG_PATH, "a", encoding="utf-8") as f:
-            f.write(json.dumps(entry, separators=(",", ":")) + "\n")
-    except Exception as e:
-        print(f"Failed to write RBAC log: {e}", file=sys.stderr)
 

@@ -121,11 +121,11 @@ class PolicyEngine:
             self._set_permissive()
 
     def _set_permissive(self):
-        """Fall back to allow-all mode (backward compatible)."""
-        self.roles = {"full": {"allowed_methods": "*", "allowed_tools": "*"}}
+        """Fail CLOSED — deny everything on policy load error."""
+        self.roles = {"deny_all": {"allowed_methods": [], "allowed_tools": []}}
         self.ip_map = {}
         self.api_key_map = {}
-        self.default_role = "full"
+        self.default_role = "deny_all"
 
     def reload(self):
         """Hot-reload the policy file."""
@@ -285,10 +285,12 @@ class PolicyEngine:
 
             if allowed_tools == "*":
                 self._audit(client_ip, api_key, role_name, rpc_method, tool_name, "ALLOW", f"Role '{role_name}' — full tool access")
+                self._record_rate_limit(client_key)
                 return True, f"Role '{role_name}' — full tool access"
             elif isinstance(allowed_tools, list):
                 if tool_name in allowed_tools:
                     self._audit(client_ip, api_key, role_name, rpc_method, tool_name, "ALLOW", f"Tool '{tool_name}' allowed for role '{role_name}'")
+                    self._record_rate_limit(client_key)
                     return True, f"Tool '{tool_name}' allowed for role '{role_name}'"
                 else:
                     self._audit(client_ip, api_key, role_name, rpc_method, tool_name, "DENY", f"Role '{role_name}' cannot use tool '{tool_name}'")
@@ -299,6 +301,7 @@ class PolicyEngine:
                 return False, f"Role '{role_name}' has no tool access configured"
 
         self._audit(client_ip, api_key, role_name, rpc_method, tool_name, "ALLOW", f"Method '{rpc_method}' allowed for role '{role_name}'")
+        self._record_rate_limit(client_key)
         return True, f"Method '{rpc_method}' allowed for role '{role_name}'"
 
 
@@ -442,7 +445,7 @@ def build_http_403(rpc_id, reason):
         "jsonrpc": "2.0",
         "id": rpc_id,
         "error": {
-            "code": -32600,
+            "code": -32001,
             "message": f"Access denied: {reason}"
         }
     }, separators=(",", ":")).encode("utf-8")

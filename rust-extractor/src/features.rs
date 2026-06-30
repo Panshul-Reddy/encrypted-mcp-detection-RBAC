@@ -4,7 +4,7 @@
 //!   [0..15]   Base 15 flow-level statistics (entropy removed — near-constant on encrypted traffic)
 //!   [15..35]  Sequence packet sizes (20 features)
 //!   [35..55]  Sequence packet directions (20 features)
-//!   [55..75]  Sequence inter-arrival times (20 features)
+//!   [55..75]  Sequence inter-arrival times (20 features, note: index 55 is always 0.0)
 //!   [75..95]  TLS Application Data record sizes — upstream (20 features, indices 0–19)
 //!   [95..115] TLS Application Data record sizes — downstream (20 features, indices 0–19)
 //!
