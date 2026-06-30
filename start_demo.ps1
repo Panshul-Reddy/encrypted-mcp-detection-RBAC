@@ -242,6 +242,12 @@ Write-Host "`n--- Live Encrypted RBAC Monitor ---" -ForegroundColor Cyan
 Write-Host "Services are running. Waiting for traffic..." -ForegroundColor Gray
 Write-Host "Press Ctrl+C to stop all services.`n" -ForegroundColor Yellow
 
+# Launch the Dashboard in the default web browser
+try {
+    Start-Process "http://127.0.0.1:5050" -ErrorAction SilentlyContinue
+    Log-Info "Launched Dashboard UI in web browser (http://127.0.0.1:5050)"
+} catch {}
+
 # Run the Live RBAC Monitor in the foreground
 try {
     $monitorProc = Start-Process -FilePath "python.exe" `
