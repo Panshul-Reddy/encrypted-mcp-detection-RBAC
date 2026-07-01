@@ -146,6 +146,7 @@ async fn main() -> Result<()> {
         server: Option<String>,
         role: Option<String>,
         accessed: Option<String>,
+        raw_accessed: Option<String>,
         decision: Option<String>,
     }
 
@@ -446,6 +447,14 @@ async fn main() -> Result<()> {
     println!("║  Inference p50:     {:>12.2}ms  ║", p50);
     println!("║  Inference p95:     {:>12.2}ms  ║", p95);
     println!("║  Inference p99:     {:>12.2}ms  ║", p99);
+    println!("╠══════════════════════════════════════╣");
+    println!("║  RBAC Allows:       {:>15}  ║", state.allow_count);
+    println!("║  RBAC Denies:       {:>15}  ║", state.deny_count);
+    println!("║  Unknown Roles:     {:>15}  ║", state.unknown_role_count);
+    for (role, count) in &state.role_counts {
+        let label = format!("Role [{}]:", role);
+        println!("║  {:<18} {:>15}  ║", label, count);
+    }
     println!("╚══════════════════════════════════════╝");
 
     Ok(())

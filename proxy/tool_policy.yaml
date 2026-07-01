@@ -1,20 +1,48 @@
 roles:
   full:
     rate_limit: 600
-    allowed_tools: "*"
+    allowed_tools:
+      - fetch
+      - search_repositories
+      - get_file_contents
+      - search
+      - list_files
+      - create_entities
+      - write_file
+      - get_file_info
+      - exa_search
+      - github_search
 
   analyst:
     rate_limit: 100
     allowed_tools:
-      - "fetch"
-      - "exa"
-      - "tavily"
-      - "memory"
+      - fetch
+      - search
+      - search_repositories
+      - get_file_contents
+      - get_file_info
+      - list_files
+      - exa_search
+      - github_search
+    denied_tools:
+      - write_file
+      - create_entities
+      - delete_file
+      - execute_bash
+      - update_memory
+      - delete_memory
 
   readonly:
     rate_limit: 30
     allowed_tools:
-      - "fetch"
+      - fetch
+      - search
+      - list_files
+    denied_tools:
+      - write_file
+      - create_entities
+      - delete_file
+      - execute_bash
 
 clients:
   by_ip:

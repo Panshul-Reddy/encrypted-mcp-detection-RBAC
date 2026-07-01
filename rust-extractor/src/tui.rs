@@ -129,6 +129,14 @@ pub struct TuiState {
     pub replay_mode: bool,
 
     pub replay_done: bool,
+
+    // RBAC Stats
+    pub allow_count: usize,
+    pub deny_count: usize,
+    pub unknown_role_count: usize,
+    pub role_counts: HashMap<String, usize>,
+    pub server_counts: HashMap<String, usize>,
+    pub access_counts: HashMap<String, usize>,
 }
 
 impl TuiState {
@@ -149,6 +157,12 @@ impl TuiState {
             table_state: TableState::default(),
             replay_mode,
             replay_done: false,
+            allow_count: 0,
+            deny_count: 0,
+            unknown_role_count: 0,
+            role_counts: HashMap::new(),
+            server_counts: HashMap::new(),
+            access_counts: HashMap::new(),
         }
     }
 
@@ -167,6 +181,28 @@ impl TuiState {
                 if (*gt == 0 && *old_label == 0) || (*gt >= 1 && *old_label >= 1) {
                     self.correct_predictions = self.correct_predictions.saturating_sub(1);
                 }
+            }
+        }
+
+        // Deduplicate RBAC stats by looking up the old flow if it exists
+        if let Some(old_flow) = self.flows.iter().find(|f| f.flow_display == flow.flow_display) {
+            if let Some(decision) = &old_flow.decision {
+                match decision.as_str() {
+                    "ALLOW" => self.allow_count = self.allow_count.saturating_sub(1),
+                    "DENY" => self.deny_count = self.deny_count.saturating_sub(1),
+                    _ => {}
+                }
+            }
+            if let Some(role) = &old_flow.role {
+                if let Some(c) = self.role_counts.get_mut(role) { *c = c.saturating_sub(1); }
+            } else {
+                self.unknown_role_count = self.unknown_role_count.saturating_sub(1);
+            }
+            if let Some(server) = &old_flow.server_name {
+                if let Some(c) = self.server_counts.get_mut(server) { *c = c.saturating_sub(1); }
+            }
+            if let Some(access) = &old_flow.accessed {
+                if let Some(c) = self.access_counts.get_mut(access) { *c = c.saturating_sub(1); }
             }
         }
 
@@ -194,6 +230,28 @@ impl TuiState {
         // Keep UI table clean
         if let Some(pos) = self.flows.iter().position(|f| f.flow_display == flow.flow_display) {
             self.flows.remove(pos);
+        }
+
+        if let Some(decision) = &flow.decision {
+            match decision.as_str() {
+                "ALLOW" => self.allow_count += 1,
+                "DENY" => self.deny_count += 1,
+                _ => {}
+            }
+        }
+
+        if let Some(role) = &flow.role {
+            *self.role_counts.entry(role.clone()).or_insert(0) += 1;
+        } else {
+            self.unknown_role_count += 1;
+        }
+
+        if let Some(server) = &flow.server_name {
+            *self.server_counts.entry(server.clone()).or_insert(0) += 1;
+        }
+
+        if let Some(access) = &flow.accessed {
+            *self.access_counts.entry(access.clone()).or_insert(0) += 1;
         }
 
 
@@ -493,9 +551,16 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
             }
 
             let decision_style = match final_decision {
-                "ALLOW" => Style::default().fg(Color::Green),
-                "DENY" => Style::default().fg(Color::Red),
+                "ALLOW" => Style::default().fg(Color::Green).bold(),
+                "DENY" => Style::default().fg(Color::Red).bold(),
                 _ => Style::default().fg(Color::DarkGray),
+            };
+
+            let role_style = match final_role {
+                "full" => Style::default().fg(Color::Cyan),
+                "analyst" => Style::default().fg(Color::Yellow),
+                "readonly" => Style::default().fg(Color::DarkGray),
+                _ => Style::default().fg(Color::Gray),
             };
 
             Row::new(vec![
@@ -506,7 +571,7 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
                 Cell::from(dur_text),
                 Cell::from(gt_text).style(gt_style),
                 Cell::from(final_server),
-                Cell::from(final_role),
+                Cell::from(final_role).style(role_style),
                 Cell::from(final_accessed),
                 Cell::from(final_decision).style(decision_style),
             ])
