@@ -582,7 +582,7 @@ async def handle_client(client_r, client_w, backend_host, backend_port, policy):
         
         role_name = policy._resolve_role(client_ip, api_key)
         if role_name == policy.default_role and client_ip == "127.0.0.1" and local_port:
-            port_role_map = {8440:"full", 8441:"analyst", 8442:"analyst", 8443:"readonly", 8444:"readonly", 8445:"readonly"}
+            port_role_map = {8440:"full", 8441:"readonly", 8442:"readonly", 8443:"readonly", 8444:"readonly", 8445:"readonly"}
             role_name = port_role_map.get(local_port, policy.default_role)
 
         raw_tool_name = tool_name

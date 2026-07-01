@@ -508,8 +508,7 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
 
             let role_style = match final_role {
                 "full" => Style::default().fg(Color::Cyan),
-                "analyst" => Style::default().fg(Color::Yellow),
-                "readonly" => Style::default().fg(Color::DarkGray),
+                "readonly" => Style::default().fg(Color::Yellow),
                 _ => Style::default().fg(Color::Gray),
             };
 

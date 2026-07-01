@@ -184,10 +184,10 @@ $proc = Start-Process -FilePath (Join-Path $noiseVenv "python.exe") `
 $script:bgJobs += $proc.Id
 Log-Success "Noise Attacker running (PID: $($proc.Id))"
 
-# --- 3e. Restricted Analyst Client (RBAC Demo) ---
-Log-Info "Starting Restricted Analyst Client (role: analyst)..."
-$env:MCP_API_KEY = "analyst-key-001"
-$env:ROLE_LABEL = "analyst"
+# --- 3e. Restricted Readonly Client (RBAC Demo) ---
+Log-Info "Starting Restricted Readonly Client (role: readonly)..."
+$env:MCP_API_KEY = "readonly-key-001"
+$env:ROLE_LABEL = "readonly"
 $env:LOOP_COUNT = "5"
 $restrictedLog = Join-Path $logDir "restricted_client.log"
 $proc = Start-Process -FilePath (Join-Path $groqVenv "python.exe") `
@@ -197,7 +197,7 @@ $proc = Start-Process -FilePath (Join-Path $groqVenv "python.exe") `
     -RedirectStandardError (Join-Path $logDir "restricted_err.log") `
     -PassThru -WindowStyle Hidden
 $script:bgJobs += $proc.Id
-Log-Success "Restricted Client running (PID: $($proc.Id)) [ANALYST - writes will be DENIED]"
+Log-Success "Restricted Client running (PID: $($proc.Id)) [READONLY - writes will be DENIED]"
 
 # ==============================================================================
 # Phase 4: Live Encrypted RBAC Monitor
