@@ -177,6 +177,7 @@ class PolicyEngine:
             "src_port": client_port,
             "dst_ip": "127.0.0.1",
             "dst_port": dst_port,
+            "flow_key": f"{client_ip}:{client_port}|127.0.0.1:{dst_port}",
             "api_key": (api_key[:8] + "...") if api_key and len(api_key) > 8 else (api_key or ""),
             "role": role,
             "method": method,
@@ -579,7 +580,7 @@ async def handle_client(client_r, client_w, backend_host, backend_port, policy):
               file=sys.stderr)
         
         # Log ALLOW decision to audit log too
-        policy._audit(client_ip, client_port, local_port, api_key, role_name, rpc_method, tool_name, "ACCEPT", "", server_name=server_name)
+        policy._audit(client_ip, client_port, local_port, api_key, role_name, rpc_method, tool_name, "ALLOW", "", server_name=server_name)
     else:
         # GET /sse, OPTIONS, etc. — always pass through (inherently read-only)
         print(f"[policy] PASS  {client_key} | {server_name} | {req.method} {req.path}",

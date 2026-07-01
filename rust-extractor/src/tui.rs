@@ -30,6 +30,7 @@ pub struct FlowMeta {
 #[derive(Debug, Clone)]
 pub struct ClassifiedFlow {
     pub flow_display: String,
+    pub canonical_key: String,
     pub label: u8,
     pub proba_mcp: f64,
     pub proba_noise: f64,
@@ -484,7 +485,7 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
             let mut final_accessed = flow.accessed.as_deref().unwrap_or("—");
             let mut final_decision = flow.decision.as_deref().unwrap_or("—");
 
-            if let Some(meta) = state.meta_map.get(&flow.flow_display) {
+            if let Some(meta) = state.meta_map.get(&flow.canonical_key) {
                 if let Some(s) = meta.server_name.as_deref() { final_server = s; }
                 if let Some(r) = meta.role.as_deref() { final_role = r; }
                 if let Some(a) = meta.accessed.as_deref() { final_accessed = a; }

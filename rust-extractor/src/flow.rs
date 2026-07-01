@@ -45,6 +45,12 @@ impl FlowKey {
         let dst = Ipv4Addr::from(self.dst_ip);
         format!("{}:{} → {}:{}", src, self.src_port, dst, self.dst_port)
     }
+
+    pub fn canonical_key(&self) -> String {
+        let src = Ipv4Addr::from(self.src_ip);
+        let dst = Ipv4Addr::from(self.dst_ip);
+        format!("{}:{}|{}:{}", src, self.src_port, dst, self.dst_port)
+    }
 }
 
 #[derive(Debug, Clone)]
