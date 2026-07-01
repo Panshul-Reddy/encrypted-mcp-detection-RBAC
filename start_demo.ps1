@@ -143,7 +143,7 @@ Start-Sleep -Seconds 3
 Log-Info "Starting Native TLS Proxy (ports 8440-8445)..."
 $proxyVenv = Join-Path $ProjectRoot "proxy\.venv\Scripts"
 $proxyLog = Join-Path $logDir "proxy.log"
-$proxyArgs = "tls_proxy.py --cert `"$(Join-Path $ProjectRoot 'nginx\ssl\mcp.crt')`" --key `"$(Join-Path $ProjectRoot 'nginx\ssl\mcp.key')`" --mappings 8440:3000,8441:3001,8442:3002,8443:3003,8444:3004,8445:3005,8446:9444 --backend-host 127.0.0.1"
+$proxyArgs = "tls_proxy.py --cert `"$(Join-Path $ProjectRoot 'nginx\ssl\mcp.crt')`" --key `"$(Join-Path $ProjectRoot 'nginx\ssl\mcp.key')`" --policy `"tool_policy.yaml`" --mappings 8440:3000,8441:3001,8442:3002,8443:3003,8444:3004,8445:3005,8446:9444 --backend-host 127.0.0.1"
 $proc = Start-Process -FilePath (Join-Path $proxyVenv "python.exe") `
     -ArgumentList $proxyArgs.Split(" ") `
     -WorkingDirectory (Join-Path $ProjectRoot "proxy") `

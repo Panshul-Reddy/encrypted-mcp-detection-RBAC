@@ -1,7 +1,7 @@
 """
-Restricted MCP Client — Analyst Role Demo
+Restricted MCP Client — Readonly Role Demo
 
-Connects to the TLS proxy using an analyst API key and demonstrates
+Connects to the TLS proxy using an readonly API key and demonstrates
 RBAC enforcement in the live pipeline. Sends a mix of allowed and
 denied operations to show fine-grained access control.
 
@@ -23,7 +23,7 @@ import time
 import argparse
 import socket
 
-# Monkey patch socket to bind to a specific source port range (45000-49999 for analyst role)
+# Monkey patch socket to bind to a specific source port range (45000-49999 for readonly role)
 _orig_socket = socket.socket
 class BoundSocket(_orig_socket):
     def __init__(self, *args, **kwargs):
@@ -46,8 +46,8 @@ if hasattr(sys.stdout, "reconfigure"):
 
 # ── Configuration ──
 VM1_IP = os.environ.get("VM1_IP", "127.0.0.1")
-MCP_API_KEY = os.environ.get("MCP_API_KEY", "analyst-key-001")
-ROLE_LABEL = os.environ.get("ROLE_LABEL", "analyst")
+MCP_API_KEY = os.environ.get("MCP_API_KEY", "readonly-key-001")
+ROLE_LABEL = os.environ.get("ROLE_LABEL", "readonly")
 LOOP_COUNT = int(os.environ.get("LOOP_COUNT", "3"))
 DELAY = float(os.environ.get("REQUEST_DELAY", "1.5"))
 
@@ -75,21 +75,16 @@ B = "\033[1m"; D = "\033[2m"; X = "\033[0m"; M = "\033[95m"
 results = {"allowed": 0, "denied": 0, "error": 0}
 
 
-# ── Operations to test (mix of allowed and denied for analyst) ──
+# ── Operations to test (mix of allowed and denied for readonly) ──
 OPERATIONS = [
-    # (server, method, params, description, expected_for_analyst)
-    ("filesystem", "tools/list", {}, "List available tools", "ALLOW"),
-    ("filesystem", "tools/call", {"name": "list_directory", "arguments": {"path": "/app"}}, "List directory /app", "ALLOW"),
-    ("filesystem", "tools/call", {"name": "read_file", "arguments": {"path": "/app/package.json"}}, "Read file contents", "ALLOW"),
-    ("filesystem", "tools/call", {"name": "get_file_info", "arguments": {"path": "/app"}}, "Get file info", "ALLOW"),
-    ("filesystem", "tools/call", {"name": "write_file", "arguments": {"path": "/tmp/test.txt", "content": "hacked"}}, "Write file (SHOULD BE BLOCKED)", "DENY"),
+    # (server, method, params, description, expected_for_readonly)
     ("fetch", "tools/call", {"name": "fetch", "arguments": {"url": "https://example.com"}}, "Fetch URL", "ALLOW"),
-    ("memory", "tools/call", {"name": "create_entities", "arguments": {"entities": [{"name": "test", "entityType": "note", "observations": ["test observation"]}]}}, "Create entity (analyst can create)", "ALLOW"),
-    ("memory", "tools/call", {"name": "search_nodes", "arguments": {"query": "test"}}, "Search knowledge graph", "ALLOW"),
-    ("memory", "tools/call", {"name": "delete_entities", "arguments": {"entityNames": ["test"]}}, "Delete entity (SHOULD BE BLOCKED)", "DENY"),
-    ("exa", "tools/call", {"name": "search", "arguments": {"query": "MCP protocol"}}, "Exa search", "ALLOW"),
-    ("tavily", "tools/call", {"name": "tavily-search", "arguments": {"query": "machine learning firewall"}}, "Tavily search", "ALLOW"),
-    ("github", "tools/call", {"name": "search_repositories", "arguments": {"query": "MCP server"}}, "Search GitHub repos", "ALLOW"),
+    ("memory", "tools/call", {"name": "search_nodes", "arguments": {"query": "MCP"}}, "Search knowledge graph", "ALLOW"),
+    ("github", "tools/call", {"name": "search_repositories", "arguments": {"query": "encrypted-mcp"}}, "Search GitHub repos", "ALLOW"),
+    ("filesystem", "tools/call", {"name": "get_file_contents", "arguments": {"path": "README.md"}}, "Get file contents", "ALLOW"),
+    ("memory", "tools/call", {"name": "create_entities", "arguments": {"name": "test_entity"}}, "Create entity", "DENY"),
+    ("memory", "tools/call", {"name": "delete_entities", "arguments": {"id": "123"}}, "Delete entity", "DENY"),
+    ("filesystem", "tools/call", {"name": "execute_bash", "arguments": {"command": "ls"}}, "Execute bash", "DENY"),
 ]
 
 
@@ -206,7 +201,7 @@ def main():
     if results["error"]:
         print(f"  {Y}Errors:        {results['error']}{X}")
     print(f"\n  {B}This demonstrates that the RBAC proxy is active in the live")
-    print(f"  pipeline — the analyst can read and create, but write_file")
+    print(f"  pipeline — the readonly can read and create, but write_file")
     print(f"  and delete_entities are blocked at the proxy level.{X}\n")
 
 

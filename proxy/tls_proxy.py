@@ -147,7 +147,7 @@ class PolicyEngine:
             print(f"[policy] Loaded policy from {self.policy_path}", file=sys.stderr)
             print(f"[policy]   Roles defined: {list(self.roles.keys())}", file=sys.stderr)
             print(f"[policy]   IP rules: {len(self.ip_map)}", file=sys.stderr)
-            print(f"[policy]   API key rules: {len(self.api_key_map)}", file=sys.stderr)
+            print(f"[policy]   API key rules: {self.api_key_map}", file=sys.stderr)
             print(f"[policy]   Default role: {self.default_role}", file=sys.stderr)
         except Exception as e:
             print(f"[policy] ERROR loading policy from {self.policy_path}: {e}",

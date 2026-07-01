@@ -24,6 +24,9 @@ roles:
     rate_limit: 60
 
 clients:
+  by_api_key:
+    "full-access-key-001": "full"
+    "readonly-key-001": "readonly"
   by_ip:
     "10.11.0.30": "full"
     "10.11.0.31": "readonly"
