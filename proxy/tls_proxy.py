@@ -497,9 +497,11 @@ async def handle_client(client_r, client_w, backend_host, backend_port, policy):
     if peer:
         client_key = f"{peer[0]}:{peer[1]}"
         client_ip = peer[0]
+        client_port = peer[1]
     else:
         client_key = "unknown"
-        client_ip = "unknown"
+        client_ip = "127.0.0.1"
+        client_port = 0
 
     server_name = SERVER_NAMES.get(backend_port, f"port-{backend_port}")
     active_connections[client_key] = client_w

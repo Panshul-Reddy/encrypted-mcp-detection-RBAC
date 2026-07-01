@@ -204,15 +204,23 @@ async fn main() -> Result<()> {
                         let key = entry.flow_key.unwrap_or_else(|| {
                             format!("{}:{}|{}:{}", entry.src_ip, cp, entry.dst_ip, dp)
                         });
-                        lock.meta_map.insert(
-                            key,
-                            live_analyzer::tui::FlowMeta {
-                                server_name: entry.server,
-                                role: entry.role,
-                                accessed: entry.accessed.filter(|s| !s.is_empty()),
-                                decision: entry.decision,
-                            },
-                        );
+                        let meta = live_analyzer::tui::FlowMeta {
+                            server_name: entry.server,
+                            role: entry.role,
+                            accessed: entry.accessed.filter(|s| !s.is_empty()),
+                            decision: entry.decision,
+                        };
+                        lock.meta_map.insert(key.clone(), meta.clone());
+                        
+                        // Back-patch existing flows
+                        for flow in lock.flows.iter_mut() {
+                            if flow.canonical_key == key {
+                                if flow.role.is_none() { flow.role = meta.role.clone(); }
+                                if flow.accessed.is_none() { flow.accessed = meta.accessed.clone(); }
+                                if flow.decision.is_none() { flow.decision = meta.decision.clone(); }
+                                if flow.server_name.is_none() { flow.server_name = meta.server_name.clone(); }
+                            }
+                        }
                     }
                 }
             }
