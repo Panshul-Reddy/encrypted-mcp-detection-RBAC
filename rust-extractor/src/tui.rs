@@ -24,6 +24,7 @@ pub struct FlowMeta {
     pub role: Option<String>,
     pub accessed: Option<String>,
     pub decision: Option<String>,
+    pub reason: Option<String>,
 }
 
 
@@ -44,6 +45,7 @@ pub struct ClassifiedFlow {
     pub role: Option<String>,
     pub accessed: Option<String>,
     pub decision: Option<String>,
+    pub deny_reason: Option<String>,
 }
 
 
@@ -127,16 +129,7 @@ pub struct TuiState {
     pub table_state: TableState,
 
     pub replay_mode: bool,
-
     pub replay_done: bool,
-
-    // RBAC Stats
-    pub allow_count: usize,
-    pub deny_count: usize,
-    pub unknown_role_count: usize,
-    pub role_counts: HashMap<String, usize>,
-    pub server_counts: HashMap<String, usize>,
-    pub access_counts: HashMap<String, usize>,
 }
 
 impl TuiState {
@@ -157,12 +150,6 @@ impl TuiState {
             table_state: TableState::default(),
             replay_mode,
             replay_done: false,
-            allow_count: 0,
-            deny_count: 0,
-            unknown_role_count: 0,
-            role_counts: HashMap::new(),
-            server_counts: HashMap::new(),
-            access_counts: HashMap::new(),
         }
     }
 
@@ -181,28 +168,6 @@ impl TuiState {
                 if (*gt == 0 && *old_label == 0) || (*gt >= 1 && *old_label >= 1) {
                     self.correct_predictions = self.correct_predictions.saturating_sub(1);
                 }
-            }
-        }
-
-        // Deduplicate RBAC stats by looking up the old flow if it exists
-        if let Some(old_flow) = self.flows.iter().find(|f| f.flow_display == flow.flow_display) {
-            if let Some(decision) = &old_flow.decision {
-                match decision.as_str() {
-                    "ALLOW" => self.allow_count = self.allow_count.saturating_sub(1),
-                    "DENY" => self.deny_count = self.deny_count.saturating_sub(1),
-                    _ => {}
-                }
-            }
-            if let Some(role) = &old_flow.role {
-                if let Some(c) = self.role_counts.get_mut(role) { *c = c.saturating_sub(1); }
-            } else {
-                self.unknown_role_count = self.unknown_role_count.saturating_sub(1);
-            }
-            if let Some(server) = &old_flow.server_name {
-                if let Some(c) = self.server_counts.get_mut(server) { *c = c.saturating_sub(1); }
-            }
-            if let Some(access) = &old_flow.accessed {
-                if let Some(c) = self.access_counts.get_mut(access) { *c = c.saturating_sub(1); }
             }
         }
 
@@ -231,29 +196,6 @@ impl TuiState {
         if let Some(pos) = self.flows.iter().position(|f| f.flow_display == flow.flow_display) {
             self.flows.remove(pos);
         }
-
-        if let Some(decision) = &flow.decision {
-            match decision.as_str() {
-                "ALLOW" => self.allow_count += 1,
-                "DENY" => self.deny_count += 1,
-                _ => {}
-            }
-        }
-
-        if let Some(role) = &flow.role {
-            *self.role_counts.entry(role.clone()).or_insert(0) += 1;
-        } else {
-            self.unknown_role_count += 1;
-        }
-
-        if let Some(server) = &flow.server_name {
-            *self.server_counts.entry(server.clone()).or_insert(0) += 1;
-        }
-
-        if let Some(access) = &flow.accessed {
-            *self.access_counts.entry(access.clone()).or_insert(0) += 1;
-        }
-
 
         self.latency_samples.push_back(flow.inference_latency);
         if self.latency_samples.len() > 1000 {
@@ -542,18 +484,26 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
             let mut final_role = flow.role.as_deref().unwrap_or("unknown");
             let mut final_accessed = flow.accessed.as_deref().unwrap_or("—");
             let mut final_decision = flow.decision.as_deref().unwrap_or("—");
+            let mut final_reason = flow.deny_reason.as_deref();
 
             if let Some(meta) = state.meta_map.get(&flow.canonical_key) {
                 if let Some(s) = meta.server_name.as_deref() { final_server = s; }
                 if let Some(r) = meta.role.as_deref() { final_role = r; }
                 if let Some(a) = meta.accessed.as_deref() { final_accessed = a; }
                 if let Some(d) = meta.decision.as_deref() { final_decision = d; }
+                if let Some(r) = meta.reason.as_deref() { final_reason = Some(r); }
             }
 
             let decision_style = match final_decision {
                 "ALLOW" => Style::default().fg(Color::Green).bold(),
                 "DENY" => Style::default().fg(Color::Red).bold(),
                 _ => Style::default().fg(Color::DarkGray),
+            };
+
+            let decision_str = if final_decision == "DENY" && final_reason.is_some() {
+                format!("DENY ({})", final_reason.unwrap())
+            } else {
+                final_decision.to_string()
             };
 
             let role_style = match final_role {
@@ -573,7 +523,7 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
                 Cell::from(final_server),
                 Cell::from(final_role).style(role_style),
                 Cell::from(final_accessed),
-                Cell::from(final_decision).style(decision_style),
+                Cell::from(decision_str).style(decision_style),
             ])
         })
         .collect();
@@ -586,9 +536,9 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
         Constraint::Length(6),  // Dur
         Constraint::Length(4),  // GT
         Constraint::Length(10), // Server
-        Constraint::Length(9),  // Role
+        Constraint::Length(8),  // Role
         Constraint::Length(14), // Access
-        Constraint::Length(9),  // Decision
+        Constraint::Length(25), // Decision + Reason
     ];
 
     let table = Table::new(
@@ -648,4 +598,56 @@ fn render_footer(f: &mut Frame, area: Rect, state: &TuiState) {
             .border_style(Style::default().fg(Color::DarkGray)),
     );
     f.render_widget(footer, area);
+}
+
+pub fn compute_rbac_summary(flows: &std::collections::VecDeque<ClassifiedFlow>, meta_map: &HashMap<String, FlowMeta>) -> (usize, usize, usize) {
+    let mut allows = 0usize;
+    let mut denies = 0usize;
+    let mut unknown_roles = 0usize;
+
+    for f in flows {
+        let mut final_role = f.role.as_deref().unwrap_or("unknown");
+        let mut final_decision = f.decision.as_deref().unwrap_or("—");
+        
+        if let Some(meta) = meta_map.get(&f.canonical_key) {
+            if let Some(r) = meta.role.as_deref() { final_role = r; }
+            if let Some(d) = meta.decision.as_deref() { final_decision = d; }
+        }
+
+        match final_decision {
+            "ALLOW" => allows += 1,
+            "DENY" => denies += 1,
+            _ => {}
+        }
+
+        if final_role == "unknown" {
+            unknown_roles += 1;
+        }
+    }
+
+    (allows, denies, unknown_roles)
+}
+
+pub fn count_by_key<F>(flows: &std::collections::VecDeque<ClassifiedFlow>, meta_map: &HashMap<String, FlowMeta>, key_fn: F) -> HashMap<String, usize>
+where
+    F: Fn(&ClassifiedFlow, Option<&FlowMeta>) -> Option<String>,
+{
+    let mut map = HashMap::new();
+    for f in flows {
+        let meta = meta_map.get(&f.canonical_key);
+        if let Some(k) = key_fn(f, meta) {
+            *map.entry(k).or_insert(0) += 1;
+        }
+    }
+    map
+}
+
+pub fn top_n(map: &HashMap<String, usize>, n: usize) -> String {
+    let mut items: Vec<_> = map.iter().collect();
+    items.sort_by(|a, b| b.1.cmp(a.1));
+    items.into_iter()
+        .take(n)
+        .map(|(k, v)| format!("{}({})", k, v))
+        .collect::<Vec<_>>()
+        .join(", ")
 }

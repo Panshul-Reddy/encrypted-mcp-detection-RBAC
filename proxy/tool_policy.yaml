@@ -24,6 +24,7 @@ roles:
       - list_files
       - exa_search
       - github_search
+      - tavily-search
     denied_tools:
       - write_file
       - create_entities

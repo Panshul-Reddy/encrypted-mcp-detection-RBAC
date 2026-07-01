@@ -67,9 +67,21 @@ def canonical_tool_name(tool_name: str) -> str:
         "search_repos": "search_repositories",
         "search_repository": "search_repositories",
         "github_search": "search_repositories",
+
         "get_file_info": "get_file_contents",
+        "get_file_content": "get_file_contents",
+        "get_file_contents": "get_file_contents",
         "read_file": "get_file_contents",
+
         "fetch_url": "fetch",
+        "web_fetch": "fetch",
+        "http_fetch": "fetch",
+        "fetch": "fetch",
+
+        "tavily_search": "tavily-search",
+        "tavily-search": "tavily-search",
+        "tavily": "tavily-search",
+
         "exa": "exa_search",
         "exa_search_tool": "exa_search",
         "create_entity": "create_entities",

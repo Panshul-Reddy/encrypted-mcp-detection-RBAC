@@ -148,6 +148,7 @@ async fn main() -> Result<()> {
         accessed: Option<String>,
         raw_accessed: Option<String>,
         decision: Option<String>,
+        reason: Option<String>,
     }
 
     let tui_state_for_log = Arc::clone(&tui_state);
@@ -210,6 +211,7 @@ async fn main() -> Result<()> {
                             role: entry.role,
                             accessed: entry.accessed.filter(|s| !s.is_empty()),
                             decision: entry.decision,
+                            reason: entry.reason,
                         };
                         lock.meta_map.insert(key.clone(), meta.clone());
                         
@@ -220,6 +222,7 @@ async fn main() -> Result<()> {
                                 if flow.accessed.is_none() { flow.accessed = meta.accessed.clone(); }
                                 if flow.decision.is_none() { flow.decision = meta.decision.clone(); }
                                 if flow.server_name.is_none() { flow.server_name = meta.server_name.clone(); }
+                                if flow.deny_reason.is_none() { flow.deny_reason = meta.reason.clone(); }
                             }
                         }
                     }
@@ -448,10 +451,21 @@ async fn main() -> Result<()> {
     println!("║  Inference p95:     {:>12.2}ms  ║", p95);
     println!("║  Inference p99:     {:>12.2}ms  ║", p99);
     println!("╠══════════════════════════════════════╣");
-    println!("║  RBAC Allows:       {:>15}  ║", state.allow_count);
-    println!("║  RBAC Denies:       {:>15}  ║", state.deny_count);
-    println!("║  Unknown Roles:     {:>15}  ║", state.unknown_role_count);
-    for (role, count) in &state.role_counts {
+
+    let (rbac_allows, rbac_denies, unknown_roles) = live_analyzer::tui::compute_rbac_summary(&state.flows, &state.meta_map);
+    println!("║  RBAC Allows:       {:>15}  ║", rbac_allows);
+    println!("║  RBAC Denies:       {:>15}  ║", rbac_denies);
+    println!("║  Unknown Roles:     {:>15}  ║", unknown_roles);
+    
+    let role_counts = live_analyzer::tui::count_by_key(&state.flows, &state.meta_map, |f, m| {
+        let mut r = f.role.as_deref().unwrap_or("unknown");
+        if let Some(meta) = m {
+            if let Some(mr) = meta.role.as_deref() { r = mr; }
+        }
+        if r != "unknown" { Some(r.to_string()) } else { None }
+    });
+
+    for (role, count) in &role_counts {
         let label = format!("Role [{}]:", role);
         println!("║  {:<18} {:>15}  ║", label, count);
     }
@@ -510,6 +524,7 @@ async fn run_classification_pipeline(
                     role: None, // Clear fallback role from API
                     accessed: None,
                     decision: None,
+                    deny_reason: None,
                 };
 
                 // Merge: Trigger Mid-Stream Kill if RBAC issues a DENY
