@@ -345,6 +345,7 @@ class PolicyEngine:
                 self._record_rate_limit(client_key)
                 return True, f"Role '{role_name}' — full tool access"
             elif isinstance(allowed_tools, list):
+                allowed_tools = [canonical_tool_name(t) for t in allowed_tools]
                 if tool_name in allowed_tools:
                     self._audit(client_ip, client_port, local_port, api_key, role_name, rpc_method, tool_name, raw_tool_name, "ALLOW", f"Tool '{tool_name}' allowed for role '{role_name}'")
                     self._record_rate_limit(client_key)
@@ -568,7 +569,10 @@ async def handle_client(client_r, client_w, backend_host, backend_port, policy):
             rpc_id = payload.get("id")
             params = payload.get("params", {})
             if isinstance(params, dict):
-                tool_name = params.get("name", "")
+                if rpc_method in ("tools/call", "tool.call", "call_tool"):
+                    tool_name = params.get("name") or params.get("tool") or params.get("tool_name") or ""
+                else:
+                    tool_name = params.get("name") or params.get("tool") or payload.get("tool") or rpc_method or ""
                 tool_args = params.get("arguments", None)
         except (json.JSONDecodeError, UnicodeDecodeError):
             # Unparseable body — will be denied for readonly roles since

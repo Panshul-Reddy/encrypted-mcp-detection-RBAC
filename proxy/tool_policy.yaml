@@ -1,22 +1,29 @@
 roles:
   full:
+    allowed_methods: "*"
     allowed_tools:
+      - fetch
+      - search_nodes
       - search_repositories
       - get_file_contents
-      - search_nodes
-      - fetch
-      - create_entities
-      - update_entities
+      - list_directory
       - execute_bash
+      - create_entities
+      - delete_entities
+      - update_entities
+      - create_relations
+      - delete_relations
     denied_tools: []
     rate_limit: 0
 
   readonly:
+    allowed_methods: "*"
     allowed_tools:
+      - fetch
+      - search_nodes
       - search_repositories
       - get_file_contents
-      - search_nodes
-      - fetch
+      - list_directory
     denied_tools:
       - create_entities
       - update_entities
