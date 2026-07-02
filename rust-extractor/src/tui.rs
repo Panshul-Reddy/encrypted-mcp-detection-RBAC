@@ -492,7 +492,9 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
             let mut final_reason = flow.deny_reason.as_deref();
 
             if let Some(meta) = state.meta_map.get(&flow.canonical_key) {
-                if let Some(s) = meta.server_name.as_deref() { final_server = s; }
+                if let Some(s) = meta.server_name.as_deref() { 
+                    if !s.is_empty() { final_server = s; }
+                }
                 if let Some(r) = meta.role.as_deref() { final_role = r; }
                 if let Some(a) = meta.accessed.as_deref() { final_accessed = a; }
                 if let Some(d) = meta.decision.as_deref() { final_decision = d; }

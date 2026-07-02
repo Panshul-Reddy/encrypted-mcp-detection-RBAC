@@ -221,7 +221,11 @@ async fn main() -> Result<()> {
                                 if flow.role.is_none() { flow.role = meta.role.clone(); }
                                 if flow.accessed.is_none() { flow.accessed = meta.accessed.clone(); }
                                 if flow.decision.is_none() { flow.decision = meta.decision.clone(); }
-                                if flow.server_name.is_none() { flow.server_name = meta.server_name.clone(); }
+                                if flow.server_name.is_none() || flow.server_name.as_deref() == Some("") {
+                                    if meta.server_name.is_some() && meta.server_name.as_deref() != Some("") {
+                                        flow.server_name = meta.server_name.clone();
+                                    }
+                                }
                                 if flow.deny_reason.is_none() { flow.deny_reason = meta.reason.clone(); }
                             }
                         }
