@@ -536,11 +536,7 @@ async fn run_classification_pipeline(
                 };
 
                 // Merge: Trigger Mid-Stream Kill if RBAC issues a DENY
-                let should_kill = if let Some(rbac) = &prediction.rbac_decision {
-                    rbac == "DENY"
-                } else {
-                    prediction.label == 0 // Fallback to dropping noise if no RBAC
-                };
+                let should_kill = prediction.label == 0 && prediction.rbac_decision.as_deref() != Some("DENY");
 
                 if should_kill {
                     if let Some(ref sock) = udp_socket {

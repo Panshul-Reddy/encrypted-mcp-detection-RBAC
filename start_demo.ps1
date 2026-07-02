@@ -117,6 +117,7 @@ Log-Step "2. Docker Infrastructure"
 
 Log-Info "Starting backend containers (mcp-servers, noise-server)..."
 Push-Location $ProjectRoot
+docker rm -f mcp-servers noise-server 2>$null
 docker compose up -d mcp-servers noise-server
 Pop-Location
 

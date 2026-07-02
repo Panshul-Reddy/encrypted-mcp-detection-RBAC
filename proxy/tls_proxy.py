@@ -272,15 +272,7 @@ class PolicyEngine:
         self.request_counts[client_key].append(now)
         return True, ""
 
-    def _record_rate_limit(self, client_key: str):
-        """
-        No-op stub — timestamps are already appended inside _check_rate_limit().
-        This method exists only because evaluate() calls it after an ALLOW decision
-        on wildcard-tool roles, but the recording already happened upstream.
-        """
-        pass
-
-    def evaluate(self, client_ip, client_port, api_key, rpc_method, tool_name, raw_tool_name, local_port=None):
+    def evaluate(self, client_ip, client_port, api_key, rpc_method, tool_name, raw_tool_name, local_port=None, server_name=""):
         """
         Evaluate whether a client may invoke a given MCP method/tool.
         """
@@ -296,13 +288,13 @@ class PolicyEngine:
         client_key = f"{client_ip}:{api_key or 'nokey'}"
         rate_ok, rate_reason = self._check_rate_limit(client_key, role_name)
         if not rate_ok:
-            self._audit(client_ip, client_port, local_port, api_key, role_name, rpc_method, tool_name, raw_tool_name, "DENY", rate_reason)
+            self._audit(client_ip, client_port, local_port, api_key, role_name, rpc_method, tool_name, raw_tool_name, "DENY", rate_reason, server_name=server_name)
             return False, rate_reason
 
         role = self.roles.get(role_name)
 
         if role is None:
-            self._audit(client_ip, client_port, local_port, api_key, role_name, rpc_method, tool_name, raw_tool_name, "DENY", f"Unknown role '{role_name}'")
+            self._audit(client_ip, client_port, local_port, api_key, role_name, rpc_method, tool_name, raw_tool_name, "DENY", f"Unknown role '{role_name}'", server_name=server_name)
             return False, f"Unknown role '{role_name}'"
 
         # ── Step 1: Check method-level access ──
@@ -326,7 +318,7 @@ class PolicyEngine:
             method_ok = False
 
         if not method_ok:
-            self._audit(client_ip, client_port, local_port, api_key, role_name, rpc_method, tool_name, raw_tool_name, "DENY", f"Role '{role_name}' cannot invoke method '{rpc_method}'")
+            self._audit(client_ip, client_port, local_port, api_key, role_name, rpc_method, tool_name, raw_tool_name, "DENY", f"Role '{role_name}' cannot invoke method '{rpc_method}'", server_name=server_name)
             return False, f"Role '{role_name}' cannot invoke method '{rpc_method}'"
 
         # ── Step 2: For tools/call, check tool-level access ──
@@ -335,31 +327,28 @@ class PolicyEngine:
             denied_tools = role.get("denied_tools", [])
             if isinstance(denied_tools, list) and tool_name in denied_tools:
                 reason = f"Tool '{tool_name}' is explicitly denied for role '{role_name}'"
-                self._audit(client_ip, client_port, local_port, api_key, role_name, rpc_method, tool_name, raw_tool_name, "DENY", reason)
+                self._audit(client_ip, client_port, local_port, api_key, role_name, rpc_method, tool_name, raw_tool_name, "DENY", reason, server_name=server_name)
                 return False, reason
 
             allowed_tools = role.get("allowed_tools", [])
 
             if allowed_tools == "*":
-                self._audit(client_ip, client_port, local_port, api_key, role_name, rpc_method, tool_name, raw_tool_name, "ALLOW", f"Role '{role_name}' — full tool access")
-                self._record_rate_limit(client_key)
+                self._audit(client_ip, client_port, local_port, api_key, role_name, rpc_method, tool_name, raw_tool_name, "ALLOW", f"Role '{role_name}' — full tool access", server_name=server_name)
                 return True, f"Role '{role_name}' — full tool access"
             elif isinstance(allowed_tools, list):
                 allowed_tools = [canonical_tool_name(t) for t in allowed_tools]
                 if tool_name in allowed_tools:
-                    self._audit(client_ip, client_port, local_port, api_key, role_name, rpc_method, tool_name, raw_tool_name, "ALLOW", f"Tool '{tool_name}' allowed for role '{role_name}'")
-                    self._record_rate_limit(client_key)
+                    self._audit(client_ip, client_port, local_port, api_key, role_name, rpc_method, tool_name, raw_tool_name, "ALLOW", f"Tool '{tool_name}' allowed for role '{role_name}'", server_name=server_name)
                     return True, f"Tool '{tool_name}' allowed for role '{role_name}'"
                 else:
-                    self._audit(client_ip, client_port, local_port, api_key, role_name, rpc_method, tool_name, raw_tool_name, "DENY", f"Role '{role_name}' cannot use tool '{tool_name}'")
+                    self._audit(client_ip, client_port, local_port, api_key, role_name, rpc_method, tool_name, raw_tool_name, "DENY", f"Role '{role_name}' cannot use tool '{tool_name}'", server_name=server_name)
                     return False, (f"Role '{role_name}' cannot use tool '{tool_name}' "
                                    f"(allowed: {', '.join(allowed_tools)})")
             else:
-                self._audit(client_ip, client_port, local_port, api_key, role_name, rpc_method, tool_name, raw_tool_name, "DENY", f"Role '{role_name}' has no tool access configured")
+                self._audit(client_ip, client_port, local_port, api_key, role_name, rpc_method, tool_name, raw_tool_name, "DENY", f"Role '{role_name}' has no tool access configured", server_name=server_name)
                 return False, f"Role '{role_name}' has no tool access configured"
 
-        self._audit(client_ip, client_port, local_port, api_key, role_name, rpc_method, tool_name, raw_tool_name, "ALLOW", f"Method '{rpc_method}' allowed for role '{role_name}'")
-        self._record_rate_limit(client_key)
+        self._audit(client_ip, client_port, local_port, api_key, role_name, rpc_method, tool_name, raw_tool_name, "ALLOW", f"Method '{rpc_method}' allowed for role '{role_name}'", server_name=server_name)
         return True, f"Method '{rpc_method}' allowed for role '{role_name}'"
 
 
@@ -592,7 +581,7 @@ async def handle_client(client_r, client_w, backend_host, backend_port, policy):
         raw_tool_name = tool_name
         tool_name = canonical_tool_name(raw_tool_name)
 
-        allowed, reason = policy.evaluate(client_ip, client_port, api_key, rpc_method, tool_name, raw_tool_name, local_port=local_port)
+        allowed, reason = policy.evaluate(client_ip, client_port, api_key, rpc_method, tool_name, raw_tool_name, local_port=local_port, server_name=server_name)
 
         # Log payload details (server name, tool, arguments)
         decision_str = "ALLOW" if allowed else "DENY"
@@ -623,8 +612,6 @@ async def handle_client(client_r, client_w, backend_host, backend_port, policy):
         print(f"[policy] ALLOW {client_key} | {server_name} | {rpc_method}{tool_suffix}",
               file=sys.stderr)
         
-        # Log ALLOW decision to audit log too
-        policy._audit(client_ip, client_port, local_port, api_key, role_name, rpc_method, tool_name, "ALLOW", "", server_name=server_name)
     else:
         # GET /sse, OPTIONS, etc. — always pass through (inherently read-only)
         print(f"[policy] PASS  {client_key} | {server_name} | {req.method} {req.path}",

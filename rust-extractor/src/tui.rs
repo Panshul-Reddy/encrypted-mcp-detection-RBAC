@@ -471,8 +471,13 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
             };
 
             let gt_text = match flow.ground_truth {
-                Some(0) => "NSE",
-                Some(1..=6) => "MCP",
+                Some(0) => "noise",
+                Some(1) => "fetch",
+                Some(2) => "memory",
+                Some(3) => "filesystem",
+                Some(4) => "github",
+                Some(5) => "exa",
+                Some(6) => "tavily",
                 _ => "—",
             };
             let gt_style = match flow.ground_truth {
@@ -543,7 +548,7 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
         Constraint::Length(6),  // Conf
         Constraint::Length(5),  // Pkts
         Constraint::Length(6),  // Dur
-        Constraint::Length(4),  // GT
+        Constraint::Length(10),  // GT
         Constraint::Length(10), // Server
     ];
     if !disable_rbac {

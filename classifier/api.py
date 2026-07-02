@@ -14,6 +14,7 @@ from pydantic import BaseModel
 import joblib
 import numpy as np
 import os
+from pathlib import Path
 import sys
 import time
 import json
@@ -28,7 +29,7 @@ models = {}
 flow_log = deque(maxlen=200)
 
 def infer_ground_truth(dst_port: int, dst_ip: str = "") -> str:
-    noise_ports = {9444}
+    noise_ports = {9443, 9444, 8446}
     mcp_backend_ports = {3000, 3001, 3002, 3003, 3004, 3005}
 
     if dst_port in noise_ports:
@@ -86,10 +87,11 @@ LABEL_MAP = {
 import yaml
 
 CONFIDENCE_THRESHOLD = 0.40
-RBAC_LOG_PATH = os.path.join("..", "logs", "encrypted_rbac_audit.jsonl")
+_BASE = Path(__file__).resolve().parent
+RBAC_LOG_PATH = str(_BASE / ".." / "logs" / "encrypted_rbac_audit.jsonl")
 
 # Load unified policy
-POLICY_PATH = os.path.join("..", "proxy", "tool_policy.yaml")
+POLICY_PATH = str(_BASE / ".." / "proxy" / "tool_policy.yaml")
 SERVER_POLICY = {}
 IP_ROLES = {}
 DEFAULT_ROLE = "readonly"
@@ -108,17 +110,15 @@ def load_policy():
         DEFAULT_ROLE = config.get("clients", {}).get("default_role", "readonly")
         roles = config.get("roles", {})
         SERVER_POLICY.clear()
-
-        for rname, rdef in roles.items():
-            if isinstance(rdef, dict):
-                tools = rdef.get("allowed_tools", [])
-                if tools == "*":
-                    SERVER_POLICY[rname] = ["fetch", "memory", "filesystem",
-                                            "github", "exa", "tavily"]
-                elif isinstance(tools, list):
-                    SERVER_POLICY[rname] = tools
-                else:
-                    SERVER_POLICY[rname] = []
+        SERVER_POLICY.update(config.get("server_access", {}))
+        
+        # Fallback if server_access not present but roles are
+        if not SERVER_POLICY:
+            for rname, rdef in roles.items():
+                if isinstance(rdef, dict):
+                    tools = rdef.get("allowed_tools", [])
+                    if tools == "*":
+                        SERVER_POLICY[rname] = ["fetch", "memory", "filesystem", "github", "exa", "tavily"]
 
         if not SERVER_POLICY:
             raise ValueError("No roles with 'allowed_tools' found in policy file.")
@@ -201,7 +201,8 @@ def select_target_model(total_pkts: int):
     for n in reversed(THRESHOLDS):   # [20, 15, 10, 8, 5, 3]
         if total_pkts >= n and n in models:
             # For 30+ packets, upgrade to full model if available
-            if total_pkts >= 30 and "full" in models:
+            FULL_MODEL_THRESHOLD = 30
+            if total_pkts >= FULL_MODEL_THRESHOLD and "full" in models:
                 return "full"
             return n
     # Not enough packets for any model yet
@@ -302,7 +303,7 @@ def predict(req: PredictRequest):
     source_ip = req.source_ip or ""
     dst_port = req.dst_port or 0
     DISABLE_RBAC = os.environ.get("DISABLE_RBAC") == "1"
-    role = "N/A" if DISABLE_RBAC else resolve_role(source_ip, dst_port, feat)
+    role = "N/A" if DISABLE_RBAC else resolve_role(source_ip, req.src_port or 0, feat)
             
     if target_n is None:
         total_bytes = int(sum(feat[15:35]))
@@ -410,7 +411,7 @@ def predict_batch(req: PredictBatchRequest):
         if target_n is None:
             source_ip = item.source_ip or ""
             dst_port = item.dst_port or 0
-            role = resolve_role(source_ip, dst_port, feat)
+            role = resolve_role(source_ip, item.src_port or 0, feat)
             total_bytes = int(sum(feat[15:35]))
             _log_rbac_decision(source_ip, role, "unknown", 0.0, "WAIT", "Waiting for more packets", "CLASSIFIED",
                                packet_count=total_pkts, total_bytes=total_bytes, ground_truth=item.ground_truth if item.ground_truth else infer_ground_truth(dst_port), model="None", dst_port=dst_port)
@@ -462,7 +463,7 @@ def predict_batch(req: PredictBatchRequest):
                     ip = "127.0.0.1"
                 
                 dst_port = orig_req.dst_port or 0
-                role = resolve_role(ip, dst_port, feat)
+                role = resolve_role(ip, orig_req.src_port or 0, feat)
                 total_pkts = int(feat[1])
                 
                 if server_name == "noise":
@@ -542,6 +543,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 def dashboard():
-    return HTMLResponse(content=open("static/dashboard.html", "r", encoding="utf-8").read(), status_code=200)
+    with open(str(Path(__file__).resolve().parent / "static" / "dashboard.html"), "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read(), status_code=200)
 
 

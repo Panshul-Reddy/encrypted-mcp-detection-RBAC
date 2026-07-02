@@ -20,7 +20,7 @@ pub struct InferenceConfig {
 impl Default for InferenceConfig {
     fn default() -> Self {
         Self {
-            base_url: "http://localhost:5000".to_string(),
+            base_url: "http://localhost:5050".to_string(),
             timeout: Duration::from_secs(5),
         }
     }

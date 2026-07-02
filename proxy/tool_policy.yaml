@@ -1,3 +1,7 @@
+server_access:
+  full: ["fetch", "memory", "filesystem", "github", "exa", "tavily"]
+  readonly: ["fetch", "github"]
+
 roles:
   full:
     allowed_methods: "*"
