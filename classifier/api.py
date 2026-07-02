@@ -301,7 +301,8 @@ def predict(req: PredictRequest):
     # ── Encrypted RBAC Decision ──
     source_ip = req.source_ip or ""
     dst_port = req.dst_port or 0
-    role = resolve_role(source_ip, dst_port, feat)
+    DISABLE_RBAC = os.environ.get("DISABLE_RBAC") == "1"
+    role = "N/A" if DISABLE_RBAC else resolve_role(source_ip, dst_port, feat)
             
     if target_n is None:
         total_bytes = int(sum(feat[15:35]))
@@ -365,13 +366,17 @@ def predict(req: PredictRequest):
             }
 
         # Base RBAC logic
-        allowed_servers = SERVER_POLICY.get(role, [])
-        if server_name in allowed_servers:
+        if DISABLE_RBAC:
             rbac_decision = "ALLOW"
-            rbac_reason = f"Role '{role}' is allowed to access server '{server_name}'"
+            rbac_reason = "Main Demo Mode (RBAC Disabled)"
         else:
-            rbac_decision = "DENY"
-            rbac_reason = f"Role '{role}' is NOT allowed to access server '{server_name}' (allowed: {', '.join(allowed_servers)})"
+            allowed_servers = SERVER_POLICY.get(role, [])
+            if server_name in allowed_servers:
+                rbac_decision = "ALLOW"
+                rbac_reason = f"Role '{role}' is allowed to access server '{server_name}'"
+            else:
+                rbac_decision = "DENY"
+                rbac_reason = f"Role '{role}' is NOT allowed to access server '{server_name}' (allowed: {', '.join(allowed_servers)})"
 
     total_bytes = int(sum(feat[15:35]))
     _log_rbac_decision(source_ip, role, server_name, confidence, rbac_decision, rbac_reason, "CLASSIFIED",

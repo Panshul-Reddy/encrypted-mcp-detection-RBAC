@@ -5,6 +5,10 @@
 # NOTE: Must be run as Administrator for Npcap packet capture.
 # ==============================================================================
 
+param (
+    [switch]$MainDemo
+)
+
 $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 
@@ -14,6 +18,11 @@ function Log-Success { param($msg) Write-Host "  [OK]    $msg" -ForegroundColor 
 function Log-Warn    { param($msg) Write-Host "  [WARN]  $msg" -ForegroundColor Yellow }
 function Log-Error   { param($msg) Write-Host "  [ERROR] $msg" -ForegroundColor Red }
 function Log-Step    { param($msg) Write-Host "`n=== $msg ===" -ForegroundColor Magenta }
+
+if ($MainDemo) {
+    Log-Step "MAIN DEMO MODE ACTIVATED (RBAC Disabled)"
+    $env:DISABLE_RBAC = "1"
+}
 
 # --- Ensure Rust is on PATH ---
 $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
