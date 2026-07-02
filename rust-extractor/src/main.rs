@@ -451,24 +451,28 @@ async fn main() -> Result<()> {
     println!("║  Inference p95:     {:>12.2}ms  ║", p95);
     println!("║  Inference p99:     {:>12.2}ms  ║", p99);
     println!("╠══════════════════════════════════════╣");
-
-    let (rbac_allows, rbac_denies, unknown_roles) = live_analyzer::tui::compute_rbac_summary(&state.flows, &state.meta_map);
-    println!("║  RBAC Allows:       {:>15}  ║", rbac_allows);
-    println!("║  RBAC Denies:       {:>15}  ║", rbac_denies);
-    println!("║  Unknown Roles:     {:>15}  ║", unknown_roles);
+    let disable_rbac = std::env::var("DISABLE_RBAC").is_ok();
     
-    let role_counts = live_analyzer::tui::count_by_key(&state.flows, &state.meta_map, |f, m| {
-        let mut r = f.role.as_deref().unwrap_or("unknown");
-        if let Some(meta) = m {
-            if let Some(mr) = meta.role.as_deref() { r = mr; }
-        }
-        if r != "unknown" { Some(r.to_string()) } else { None }
-    });
+    if !disable_rbac {
+        let (rbac_allows, rbac_denies, unknown_roles) = live_analyzer::tui::compute_rbac_summary(&state.flows, &state.meta_map);
+        println!("║  RBAC Allows:       {:>15}  ║", rbac_allows);
+        println!("║  RBAC Denies:       {:>15}  ║", rbac_denies);
+        println!("║  Unknown Roles:     {:>15}  ║", unknown_roles);
+        
+        let role_counts = live_analyzer::tui::count_by_key(&state.flows, &state.meta_map, |f, m| {
+            let mut r = f.role.as_deref().unwrap_or("unknown");
+            if let Some(meta) = m {
+                if let Some(mr) = meta.role.as_deref() { r = mr; }
+            }
+            if r != "unknown" { Some(r.to_string()) } else { None }
+        });
 
-    for (role, count) in &role_counts {
-        let label = format!("Role [{}]:", role);
-        println!("║  {:<18} {:>15}  ║", label, count);
+        for (role, count) in &role_counts {
+            let label = format!("Role [{}]:", role);
+            println!("║  {:<18} {:>15}  ║", label, count);
+        }
     }
+
     println!("╚══════════════════════════════════════╝");
 
     Ok(())

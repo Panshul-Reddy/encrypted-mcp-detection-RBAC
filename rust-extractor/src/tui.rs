@@ -435,7 +435,9 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
         }
     }
 
-    let header = Row::new(vec![
+    let disable_rbac = std::env::var("DISABLE_RBAC").is_ok();
+
+    let mut header_cells = vec![
         Cell::from("Flow").style(Style::default().fg(Color::White).bold()),
         Cell::from("Class").style(Style::default().fg(Color::White).bold()),
         Cell::from("Conf").style(Style::default().fg(Color::White).bold()),
@@ -443,10 +445,13 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
         Cell::from("Dur").style(Style::default().fg(Color::White).bold()),
         Cell::from("GT").style(Style::default().fg(Color::White).bold()),
         Cell::from("Server").style(Style::default().fg(Color::White).bold()),
-        Cell::from("Role").style(Style::default().fg(Color::White).bold()),
-        Cell::from("Access").style(Style::default().fg(Color::White).bold()),
-        Cell::from("Decision").style(Style::default().fg(Color::White).bold()),
-    ]);
+    ];
+    if !disable_rbac {
+        header_cells.push(Cell::from("Role").style(Style::default().fg(Color::White).bold()));
+        header_cells.push(Cell::from("Access").style(Style::default().fg(Color::White).bold()));
+        header_cells.push(Cell::from("Decision").style(Style::default().fg(Color::White).bold()));
+    }
+    let header = Row::new(header_cells);
 
     let rows: Vec<Row> = sorted
         .iter()
@@ -512,7 +517,7 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
                 _ => Style::default().fg(Color::Gray),
             };
 
-            Row::new(vec![
+            let mut row_cells = vec![
                 Cell::from(flow.flow_display.clone()),
                 Cell::from(class_text).style(class_style),
                 Cell::from(conf_text).style(proba_style),
@@ -520,14 +525,17 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
                 Cell::from(dur_text),
                 Cell::from(gt_text).style(gt_style),
                 Cell::from(final_server),
-                Cell::from(final_role).style(role_style),
-                Cell::from(final_accessed),
-                Cell::from(decision_str).style(decision_style),
-            ])
+            ];
+            if !disable_rbac {
+                row_cells.push(Cell::from(final_role).style(role_style));
+                row_cells.push(Cell::from(final_accessed));
+                row_cells.push(Cell::from(decision_str).style(decision_style));
+            }
+            Row::new(row_cells)
         })
         .collect();
 
-    let widths = [
+    let mut widths = vec![
         Constraint::Min(28),    // Flow
         Constraint::Length(7),  // Class
         Constraint::Length(6),  // Conf
@@ -535,10 +543,12 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
         Constraint::Length(6),  // Dur
         Constraint::Length(4),  // GT
         Constraint::Length(10), // Server
-        Constraint::Length(8),  // Role
-        Constraint::Length(14), // Access
-        Constraint::Length(25), // Decision + Reason
     ];
+    if !disable_rbac {
+        widths.push(Constraint::Length(8));  // Role
+        widths.push(Constraint::Length(14)); // Access
+        widths.push(Constraint::Length(25)); // Decision + Reason
+    }
 
     let table = Table::new(
         rows,

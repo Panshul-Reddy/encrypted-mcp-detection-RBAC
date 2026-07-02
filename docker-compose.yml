@@ -8,7 +8,7 @@ services:
       - ./proxy/tool_policy.yaml:/app/tool_policy.yaml:ro
     networks:
       mcp-lab-net:
-        ipv4_address: 10.11.0.5
+        ipv4_address: 10.12.0.5
     depends_on:
       - mcp-servers
 
@@ -18,7 +18,7 @@ services:
     container_name: mcp-servers
     networks:
       mcp-lab-net:
-        ipv4_address: 10.11.0.10
+        ipv4_address: 10.12.0.10
     ports:
       - "3000:3000"
       - "3001:3001"
@@ -39,7 +39,7 @@ services:
       - "9444:9444"
     networks:
       mcp-lab-net:
-        ipv4_address: 10.11.0.20
+        ipv4_address: 10.12.0.20
 
   # Groq MCP Client (primary — single-turn + multi-turn sessions)
   groq-client:
@@ -49,17 +49,17 @@ services:
       - tls-proxy
     networks:
       mcp-lab-net:
-        ipv4_address: 10.11.0.30
+        ipv4_address: 10.12.0.30
     environment:
-      - VM1_IP=10.11.0.5
+      - VM1_IP=10.12.0.5
       - GROQ_API_KEY=${GROQ_API_KEY:-"dummy"}
       - PYTHONUNBUFFERED=1
 
   # Chaos MCP Client — adversarial / zero-day traffic generator.
   # Runs in parallel with groq-client to increase MCP traffic volume and diversity.
-  # Uses a distinct IP (10.11.0.31) so the training data sees MCP from two source
+  # Uses a distinct IP (10.12.0.31) so the training data sees MCP from two source
   # addresses, partially addressing Issue 6 (single source IP generalisation risk).
-  # The ground_truth_label() subnet check (10.11.0.0/24) correctly labels both .30
+  # The ground_truth_label() subnet check (10.12.0.0/24) correctly labels both .30
   # and .31 as internal MCP clients.
   chaos-client:
     build: ./groq-client
@@ -69,9 +69,9 @@ services:
       - tls-proxy
     networks:
       mcp-lab-net:
-        ipv4_address: 10.11.0.31
+        ipv4_address: 10.12.0.31
     environment:
-      - VM1_IP=10.11.0.5
+      - VM1_IP=10.12.0.5
       - GROQ_API_KEY=${GROQ_API_KEY:-"dummy"}
       - PYTHONUNBUFFERED=1
 
@@ -85,9 +85,9 @@ services:
       - noise-server
     networks:
       mcp-lab-net:
-        ipv4_address: 10.11.0.40
+        ipv4_address: 10.12.0.40
     environment:
-      - NOISE_SERVER=https://10.11.0.5:9443
+      - NOISE_SERVER=https://10.12.0.5:9443
 
   # Packet capture sidecars (Rust Core will do this later, but we use netshoot for dataset gen)
   mcp-tap:
@@ -132,4 +132,4 @@ networks:
     ipam:
       driver: default
       config:
-        - subnet: 10.11.0.0/24
+        - subnet: 10.12.0.0/24
