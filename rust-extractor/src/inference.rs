@@ -45,7 +45,7 @@ struct PredictBatchRequest {
 #[derive(Debug, Clone, Deserialize)]
 pub struct PredictResponse {
     pub label: i16,
-    pub proba: [f64; 2],
+    pub proba: [f64; 7],
     pub rbac_decision: Option<String>,
     pub server_name: Option<String>,
     pub role: Option<String>,

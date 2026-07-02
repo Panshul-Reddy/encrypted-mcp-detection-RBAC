@@ -35,6 +35,7 @@ pub struct ClassifiedFlow {
     pub label: u8,
     pub proba_mcp: f64,
     pub proba_noise: f64,
+    pub proba_tools: [f64; 6],
     pub pkt_count: usize,
     pub duration_s: f64,
     pub ground_truth: Option<u8>,
@@ -83,6 +84,7 @@ pub enum FilterMode {
     All,
     McpOnly,
     NoiseOnly,
+    McpToolDetail,
 }
 
 impl FilterMode {
@@ -90,7 +92,8 @@ impl FilterMode {
         match self {
             FilterMode::All => FilterMode::McpOnly,
             FilterMode::McpOnly => FilterMode::NoiseOnly,
-            FilterMode::NoiseOnly => FilterMode::All,
+            FilterMode::NoiseOnly => FilterMode::McpToolDetail,
+            FilterMode::McpToolDetail => FilterMode::All,
         }
     }
 
@@ -99,6 +102,7 @@ impl FilterMode {
             FilterMode::All => "All",
             FilterMode::McpOnly => "MCP Only",
             FilterMode::NoiseOnly => "Noise Only",
+            FilterMode::McpToolDetail => "MCP Tool Detail",
         }
     }
 }
@@ -117,17 +121,14 @@ pub struct TuiState {
     pub total_noise: u64,
     pub correct_predictions: u64,
     pub total_with_ground_truth: u64,
+    pub correct_tool_predictions: u64,
+    pub total_with_tool_ground_truth: u64,
 
     pub start_time: Instant,
-
     pub paused: bool,
-
     pub sort_mode: SortMode,
-
     pub filter_mode: FilterMode,
-
     pub table_state: TableState,
-
     pub replay_mode: bool,
     pub replay_done: bool,
 }
@@ -143,6 +144,8 @@ impl TuiState {
             total_noise: 0,
             correct_predictions: 0,
             total_with_ground_truth: 0,
+            correct_tool_predictions: 0,
+            total_with_tool_ground_truth: 0,
             start_time: Instant::now(),
             paused: false,
             sort_mode: SortMode::Recent,
@@ -168,6 +171,12 @@ impl TuiState {
                 if (*gt == 0 && *old_label == 0) || (*gt >= 1 && *old_label >= 1) {
                     self.correct_predictions = self.correct_predictions.saturating_sub(1);
                 }
+                if *gt >= 1 && *old_label >= 1 {
+                    self.total_with_tool_ground_truth = self.total_with_tool_ground_truth.saturating_sub(1);
+                    if *gt == *old_label {
+                        self.correct_tool_predictions = self.correct_tool_predictions.saturating_sub(1);
+                    }
+                }
             }
         }
 
@@ -183,6 +192,14 @@ impl TuiState {
             // Binary accuracy: Correct if both are Noise (0) or both are MCP (>=1)
             if (gt == 0 && flow.label == 0) || (gt >= 1 && flow.label >= 1) {
                 self.correct_predictions += 1;
+            }
+            
+            // Tool accuracy: Only measured when both are MCP
+            if gt >= 1 && flow.label >= 1 {
+                self.total_with_tool_ground_truth += 1;
+                if gt == flow.label {
+                    self.correct_tool_predictions += 1;
+                }
             }
         }
         
@@ -383,6 +400,15 @@ fn render_header(f: &mut Frame, area: Rect, state: &TuiState, stats: &CaptureSta
             Span::styled(format!("{}", state.total_noise), Style::default().fg(Color::DarkGray)),
             Span::styled("  │  Accuracy: ", Style::default().fg(Color::DarkGray)),
             Span::styled(accuracy_str, Style::default().fg(Color::Green).bold()),
+            Span::styled("  │  Tool Acc: ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                if state.total_with_tool_ground_truth > 0 {
+                    format!("{:.1}%", (state.correct_tool_predictions as f64 / state.total_with_tool_ground_truth as f64) * 100.0)
+                } else {
+                    "N/A".to_string()
+                },
+                Style::default().fg(Color::Magenta).bold(),
+            ),
             Span::styled("  │  Inference p50/p95: ", Style::default().fg(Color::DarkGray)),
             Span::styled(
                 format!("{:.1}/{:.1}ms", p50.as_secs_f64() * 1000.0, p95.as_secs_f64() * 1000.0),
@@ -412,6 +438,7 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
             FilterMode::All => true,
             FilterMode::McpOnly => f.label >= 1,
             FilterMode::NoiseOnly => f.label == 0,
+            FilterMode::McpToolDetail => f.label >= 1,
         })
         .collect();
 
@@ -436,126 +463,193 @@ fn render_flow_table(f: &mut Frame, area: Rect, state: &TuiState) {
     }
 
     let disable_rbac = std::env::var("DISABLE_RBAC").is_ok();
+    let is_tool_detail = matches!(state.filter_mode, FilterMode::McpToolDetail);
 
-    let mut header_cells = vec![
-        Cell::from("Flow").style(Style::default().fg(Color::White).bold()),
-        Cell::from("Class").style(Style::default().fg(Color::White).bold()),
-        Cell::from("Conf").style(Style::default().fg(Color::White).bold()),
-        Cell::from("Pkts").style(Style::default().fg(Color::White).bold()),
-        Cell::from("Dur").style(Style::default().fg(Color::White).bold()),
-        Cell::from("GT").style(Style::default().fg(Color::White).bold()),
-        Cell::from("Server").style(Style::default().fg(Color::White).bold()),
-    ];
-    if !disable_rbac {
-        header_cells.push(Cell::from("Role").style(Style::default().fg(Color::White).bold()));
-        header_cells.push(Cell::from("Access").style(Style::default().fg(Color::White).bold()));
-        header_cells.push(Cell::from("Decision").style(Style::default().fg(Color::White).bold()));
-    }
+    let mut header_cells = if is_tool_detail {
+        vec![
+            Cell::from("Flow").style(Style::default().fg(Color::White).bold()),
+            Cell::from("Pred").style(Style::default().fg(Color::White).bold()),
+            Cell::from("GT").style(Style::default().fg(Color::White).bold()),
+            Cell::from("Pkts").style(Style::default().fg(Color::White).bold()),
+            Cell::from("Fetch").style(Style::default().fg(Color::White).bold()),
+            Cell::from("Mem").style(Style::default().fg(Color::White).bold()),
+            Cell::from("FS").style(Style::default().fg(Color::White).bold()),
+            Cell::from("GH").style(Style::default().fg(Color::White).bold()),
+            Cell::from("Exa").style(Style::default().fg(Color::White).bold()),
+            Cell::from("Tavily").style(Style::default().fg(Color::White).bold()),
+        ]
+    } else {
+        let mut cells = vec![
+            Cell::from("Flow").style(Style::default().fg(Color::White).bold()),
+            Cell::from("Class").style(Style::default().fg(Color::White).bold()),
+            Cell::from("Conf").style(Style::default().fg(Color::White).bold()),
+            Cell::from("Pkts").style(Style::default().fg(Color::White).bold()),
+            Cell::from("Dur").style(Style::default().fg(Color::White).bold()),
+            Cell::from("GT").style(Style::default().fg(Color::White).bold()),
+            Cell::from("Server").style(Style::default().fg(Color::White).bold()),
+        ];
+        if !disable_rbac {
+            cells.push(Cell::from("Role").style(Style::default().fg(Color::White).bold()));
+            cells.push(Cell::from("Access").style(Style::default().fg(Color::White).bold()));
+            cells.push(Cell::from("Decision").style(Style::default().fg(Color::White).bold()));
+        }
+        cells
+    };
+    
     let header = Row::new(header_cells);
 
     let rows: Vec<Row> = sorted
         .iter()
         .map(|flow| {
-            let (class_text, class_style) = if flow.label >= 1 {
-                ("MCP", Style::default().fg(Color::Cyan).bold())
-            } else {
-                ("NOISE", Style::default().fg(Color::DarkGray))
-            };
-
-            let proba_style = if flow.proba_mcp > 0.9 {
-                Style::default().fg(Color::Green)
-            } else if flow.proba_mcp > 0.5 {
-                Style::default().fg(Color::Yellow)
-            } else {
-                Style::default().fg(Color::DarkGray)
-            };
-
-            let gt_text = match flow.ground_truth {
-                Some(0) => "noise",
-                Some(1) => "fetch",
-                Some(2) => "memory",
-                Some(3) => "filesystem",
-                Some(4) => "github",
-                Some(5) => "exa",
-                Some(6) => "tavily",
-                _ => "—",
-            };
             let gt_style = match flow.ground_truth {
                 Some(gt) if (gt == 0 && flow.label == 0) || (gt >= 1 && flow.label >= 1) => Style::default().fg(Color::Green),
                 Some(_) => Style::default().fg(Color::Red).bold(),
                 None => Style::default().fg(Color::DarkGray),
             };
 
-            let dur_text = format!("{:.1}s", flow.duration_s);
-            let conf = flow.proba_mcp.max(flow.proba_noise);
-            let conf_text = format!("{:.2}", conf);
-
-            let mut final_server = flow.server_name.as_deref().unwrap_or("—");
-            let mut final_role = flow.role.as_deref().unwrap_or("unknown");
-            let mut final_accessed = flow.accessed.as_deref().unwrap_or("—");
-            let mut final_decision = flow.decision.as_deref().unwrap_or("—");
-            let mut final_reason = flow.deny_reason.as_deref();
-
-            if let Some(meta) = state.meta_map.get(&flow.canonical_key) {
-                if let Some(s) = meta.server_name.as_deref() { 
-                    if !s.is_empty() { final_server = s; }
+            if is_tool_detail {
+                let pred_name = flow.server_name.as_deref().unwrap_or("unknown");
+                let gt_text = match flow.ground_truth {
+                    Some(0) => "noise",
+                    Some(1) => "fetch",
+                    Some(2) => "memory",
+                    Some(3) => "filesystem",
+                    Some(4) => "github",
+                    Some(5) => "exa",
+                    Some(6) => "tavily",
+                    _ => "—",
+                };
+                
+                // Highlight max tool proba
+                let max_prob_idx = flow.proba_tools.iter().enumerate().max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap()).map(|(i, _)| i).unwrap_or(0);
+                
+                let mut tool_cells = Vec::new();
+                for (i, &p) in flow.proba_tools.iter().enumerate() {
+                    let text = format!("{:.2}", p);
+                    let style = if i == max_prob_idx {
+                        Style::default().fg(Color::Yellow).bold()
+                    } else {
+                        Style::default().fg(Color::DarkGray)
+                    };
+                    tool_cells.push(Cell::from(text).style(style));
                 }
-                if let Some(r) = meta.role.as_deref() { final_role = r; }
-                if let Some(a) = meta.accessed.as_deref() { final_accessed = a; }
-                if let Some(d) = meta.decision.as_deref() { final_decision = d; }
-                if let Some(r) = meta.reason.as_deref() { final_reason = Some(r); }
-            }
-
-            let decision_style = match final_decision {
-                "ALLOW" => Style::default().fg(Color::Green).bold(),
-                "DENY" => Style::default().fg(Color::Red).bold(),
-                _ => Style::default().fg(Color::DarkGray),
-            };
-
-            let decision_str = if final_decision == "DENY" && final_reason.is_some() {
-                format!("DENY ({})", final_reason.unwrap())
+                
+                let mut row_cells = vec![
+                    Cell::from(flow.flow_display.clone()),
+                    Cell::from(pred_name).style(Style::default().fg(Color::Cyan).bold()),
+                    Cell::from(gt_text).style(gt_style),
+                    Cell::from(flow.pkt_count.to_string()),
+                ];
+                row_cells.extend(tool_cells);
+                Row::new(row_cells)
             } else {
-                final_decision.to_string()
-            };
+                let (class_text, class_style) = if flow.label >= 1 {
+                    ("MCP", Style::default().fg(Color::Cyan).bold())
+                } else {
+                    ("NOISE", Style::default().fg(Color::DarkGray))
+                };
 
-            let role_style = match final_role {
-                "full" => Style::default().fg(Color::Cyan),
-                "readonly" => Style::default().fg(Color::Yellow),
-                _ => Style::default().fg(Color::Gray),
-            };
+                let proba_style = if flow.proba_mcp > 0.9 {
+                    Style::default().fg(Color::Green)
+                } else if flow.proba_mcp > 0.5 {
+                    Style::default().fg(Color::Yellow)
+                } else {
+                    Style::default().fg(Color::DarkGray)
+                };
 
-            let mut row_cells = vec![
-                Cell::from(flow.flow_display.clone()),
-                Cell::from(class_text).style(class_style),
-                Cell::from(conf_text).style(proba_style),
-                Cell::from(flow.pkt_count.to_string()),
-                Cell::from(dur_text),
-                Cell::from(gt_text).style(gt_style),
-                Cell::from(final_server),
-            ];
-            if !disable_rbac {
-                row_cells.push(Cell::from(final_role).style(role_style));
-                row_cells.push(Cell::from(final_accessed));
-                row_cells.push(Cell::from(decision_str).style(decision_style));
+                let gt_text = match flow.ground_truth {
+                    Some(0) => "NSE",
+                    Some(1..=6) => "MCP",
+                    _ => "—",
+                };
+
+                let dur_text = format!("{:.1}s", flow.duration_s);
+                let conf = flow.proba_mcp.max(flow.proba_noise);
+                let conf_text = format!("{:.2}", conf);
+
+                let mut final_server = flow.server_name.as_deref().unwrap_or("—");
+                let mut final_role = flow.role.as_deref().unwrap_or("unknown");
+                let mut final_accessed = flow.accessed.as_deref().unwrap_or("—");
+                let mut final_decision = flow.decision.as_deref().unwrap_or("—");
+                let mut final_reason = flow.deny_reason.as_deref();
+
+                if let Some(meta) = state.meta_map.get(&flow.canonical_key) {
+                    if let Some(s) = meta.server_name.as_deref() { 
+                        if !s.is_empty() { final_server = s; }
+                    }
+                    if let Some(r) = meta.role.as_deref() { final_role = r; }
+                    if let Some(a) = meta.accessed.as_deref() { final_accessed = a; }
+                    if let Some(d) = meta.decision.as_deref() { final_decision = d; }
+                    if let Some(r) = meta.reason.as_deref() { final_reason = Some(r); }
+                }
+
+                let decision_style = match final_decision {
+                    "ALLOW" => Style::default().fg(Color::Green).bold(),
+                    "DENY" => Style::default().fg(Color::Red).bold(),
+                    _ => Style::default().fg(Color::DarkGray),
+                };
+
+                let decision_str = if final_decision == "DENY" && final_reason.is_some() {
+                    format!("DENY ({})", final_reason.unwrap())
+                } else {
+                    final_decision.to_string()
+                };
+
+                let role_style = match final_role {
+                    "full" => Style::default().fg(Color::Cyan),
+                    "readonly" => Style::default().fg(Color::Yellow),
+                    _ => Style::default().fg(Color::Gray),
+                };
+
+                let mut row_cells = vec![
+                    Cell::from(flow.flow_display.clone()),
+                    Cell::from(class_text).style(class_style),
+                    Cell::from(conf_text).style(proba_style),
+                    Cell::from(flow.pkt_count.to_string()),
+                    Cell::from(dur_text),
+                    Cell::from(gt_text).style(gt_style),
+                    Cell::from(final_server),
+                ];
+                if !disable_rbac {
+                    row_cells.push(Cell::from(final_role).style(role_style));
+                    row_cells.push(Cell::from(final_accessed));
+                    row_cells.push(Cell::from(decision_str).style(decision_style));
+                }
+                Row::new(row_cells)
             }
-            Row::new(row_cells)
         })
         .collect();
 
-    let mut widths = vec![
-        Constraint::Min(28),    // Flow
-        Constraint::Length(7),  // Class
-        Constraint::Length(6),  // Conf
-        Constraint::Length(5),  // Pkts
-        Constraint::Length(6),  // Dur
-        Constraint::Length(10),  // GT
-        Constraint::Length(10), // Server
-    ];
-    if !disable_rbac {
-        widths.push(Constraint::Length(8));  // Role
-        widths.push(Constraint::Length(14)); // Access
-        widths.push(Constraint::Length(25)); // Decision + Reason
-    }
+    let mut widths = if is_tool_detail {
+        vec![
+            Constraint::Min(28),    // Flow
+            Constraint::Length(10),  // Pred
+            Constraint::Length(10),  // GT
+            Constraint::Length(5),  // Pkts
+            Constraint::Length(6),  // Fetch
+            Constraint::Length(6),  // Mem
+            Constraint::Length(6),  // FS
+            Constraint::Length(6),  // GH
+            Constraint::Length(6),  // Exa
+            Constraint::Length(6),  // Tavily
+        ]
+    } else {
+        let mut w = vec![
+            Constraint::Min(28),    // Flow
+            Constraint::Length(7),  // Class
+            Constraint::Length(6),  // Conf
+            Constraint::Length(5),  // Pkts
+            Constraint::Length(6),  // Dur
+            Constraint::Length(10),  // GT
+            Constraint::Length(10), // Server
+        ];
+        if !disable_rbac {
+            w.push(Constraint::Length(8));  // Role
+            w.push(Constraint::Length(14)); // Access
+            w.push(Constraint::Length(25)); // Decision + Reason
+        }
+        w
+    };
 
     let table = Table::new(
         rows,

@@ -313,7 +313,7 @@ def predict(req: PredictRequest):
                            "unknown", "WAIT", 0.0, "None", total_pkts, feat, provided_gt=req.ground_truth)
         return {
             "label": -1, 
-            "proba": [0.0, 0.0],
+            "proba": [0.0] * 7,
             "rbac_decision": "WAIT",
             "rbac_reason": "Waiting for more packets",
             "server_name": "unknown",
@@ -359,7 +359,7 @@ def predict(req: PredictRequest):
                                server_name, "WAIT", confidence, target_n, total_pkts, feat, provided_gt=req.ground_truth)
             return {
                 "label": -1,
-                "proba": [noise_prob, mcp_prob],
+                "proba": [float(p) for p in probas],
                 "rbac_decision": "WAIT",
                 "rbac_reason": f"Confidence {confidence*100:.1f}% below threshold, waiting for more packets",
                 "server_name": server_name,
@@ -387,7 +387,7 @@ def predict(req: PredictRequest):
 
     return {
         "label": label,
-        "proba": [noise_prob, mcp_prob],
+        "proba": [float(p) for p in probas],
         "rbac_decision": rbac_decision,
         "rbac_reason": rbac_reason,
         "server_name": server_name,
@@ -419,7 +419,7 @@ def predict_batch(req: PredictBatchRequest):
                                "unknown", "WAIT", 0.0, "None", total_pkts, feat, provided_gt=item.ground_truth)
             predictions[idx] = {
                 "label": -1, 
-                "proba": [0.0, 0.0],
+                "proba": [0.0] * 7,
                 "rbac_decision": "WAIT",
                 "rbac_reason": "Waiting for more packets",
                 "server_name": "unknown",
@@ -480,7 +480,7 @@ def predict_batch(req: PredictBatchRequest):
                                            server_name, "WAIT", confidence, target_n, total_pkts, feat, provided_gt=orig_req.ground_truth)
                         predictions[i] = {
                             "label": -1,
-                            "proba": [noise_prob, mcp_prob],
+                            "proba": [float(p) for p in probas],
                             "rbac_decision": "WAIT",
                             "rbac_reason": f"Confidence {confidence*100:.1f}% below threshold",
                             "server_name": server_name,
@@ -505,7 +505,7 @@ def predict_batch(req: PredictBatchRequest):
                     
                 predictions[i] = {
                     "label": int(label),
-                    "proba": [noise_prob, mcp_prob],
+                    "proba": [float(p) for p in probas],
                     "rbac_decision": rbac_decision,
                     "rbac_reason": rbac_reason,
                     "server_name": server_name,
@@ -514,7 +514,7 @@ def predict_batch(req: PredictBatchRequest):
             except Exception as e:
                 predictions[i] = {
                     "label": -1,
-                    "proba": [0.0, 0.0],
+                    "proba": [0.0] * 7,
                     "rbac_decision": "ERROR",
                     "rbac_reason": str(e)
                 }
